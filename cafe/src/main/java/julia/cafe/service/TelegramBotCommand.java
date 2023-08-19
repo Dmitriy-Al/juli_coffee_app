@@ -1,8 +1,6 @@
 package julia.cafe.service;
 
-import julia.cafe.model.Product;
-import julia.cafe.model.ProductRepository;
-import julia.cafe.model.UserRepository;
+import julia.cafe.model.*;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
@@ -13,7 +11,6 @@ import org.telegram.telegrambots.meta.api.methods.invoices.CreateInvoiceLink;
 import org.telegram.telegrambots.meta.api.methods.send.SendMessage;
 import org.telegram.telegrambots.meta.api.methods.send.SendPhoto;
 import org.telegram.telegrambots.meta.api.methods.updatingmessages.DeleteMessage;
-import org.telegram.telegrambots.meta.api.methods.updatingmessages.EditMessageCaption;
 import org.telegram.telegrambots.meta.api.methods.updatingmessages.EditMessageMedia;
 import org.telegram.telegrambots.meta.api.methods.updatingmessages.EditMessageText;
 import org.telegram.telegrambots.meta.api.objects.Update;
@@ -38,6 +35,8 @@ public class TelegramBotCommand extends TelegramLongPollingBot {
     public UserRepository userRepository;
     @Autowired
     public ProductRepository productRepository;
+    @Autowired
+    public ProductMenuCategoryRepository productMenuCategoryRepository;
 
 
     public TelegramBotCommand() {
@@ -59,18 +58,21 @@ public class TelegramBotCommand extends TelegramLongPollingBot {
                 executeSendMessage(sendMessage);
 
             } else if (messageText.equals("☕" + " Кофе и напитки")) { // клавиатура
-                //executeSendMessage(receiveProductMenu(chatId));
-                Iterable<Product> products = productRepository.findAll();
-                List<Product> productList = new ArrayList<>();
-                products.forEach(productList::add);
-                executeSendMessage(method.receiveBeverageMenu(stringChatId, productList));
+                List<MenuProductCategory> menuCategories = (List<MenuProductCategory>) productMenuCategoryRepository.findAll();
+
+                executePhotoMessage(method.receiveCategoryMenu(chatId, "https://disk.yandex.ru/i/1QoAtJVbb3U8TA", menuCategories));
 
             } else if (messageText.equals("⚙" + " Регистрация и настройки")) {
 
 
             } else if (messageText.equals("Добавить новый продукт")) {
-                executeSendMessage(method.receiveCreatedSendMessage(chatId, "Введите через запятую вид продукта, название, описание, ссылку на изображение и объём-цену продукта через пробел"));
+                executeSendMessage(method.receiveCreatedSendMessage(chatId, "Введите через знак _ категорию меню для продукта, вид продукта, название, описание, ссылку на изображение и объём-цену продукта через пробел (отсутствующее поле: *)"));
                 TEMP_DATA.put(chatId, "Добавить новый продукт");
+
+            } else if (messageText.equals("Добавить категорию")) {
+                executeSendMessage(method.receiveCreatedSendMessage(chatId, "Введите через знак _ категорию для изображения и ссылку на него"));
+                TEMP_DATA.put(chatId, "Добавить категорию");
+
 
             } else if (messageText.equals("Удалить продукт из ассортимента")) {
 
@@ -82,18 +84,13 @@ public class TelegramBotCommand extends TelegramLongPollingBot {
                     executeSendMessage(sendMessage);
                 } else {
                     String[] productData = GROCERY_BASKET.get(chatId).split("#"); // productData[0]: 103-300-150  productId, объём, цена
-                    List<LabeledPrice> labeledPriceList = new ArrayList<>();
                     for (int i = 0; i < productData.length; i++) {
                         String[] splitData = productData[i].split("-");
                         int productId = Integer.parseInt(splitData[0]);
-                        int productPrice = Integer.parseInt(splitData[2]);
                         Optional<Product> product = productRepository.findById(productId);
                         String temp = productData[i];
                         productData[i] = product.get().getProductCategory() + "  " + product.get().getProductTitle() + "-" + temp;
-                        labeledPriceList.add(new LabeledPrice(product.get().getProductTitle(), productPrice * 100));
                     }
-                   //String payLinc = receiveExecutedInvoiceLinc(method.payOrder("https://disk.yandex.ru/i/K331xGIlON2LxA", "401643678:TEST:95e3e338-2311-4825-bd6f-0de31a0b5ce8", labeledPriceList));
-
                     executeSendMessage(method.receiveGroceryBasket(String.valueOf(chatId), "Ваша корзина:", productData));
 
                 }
@@ -107,26 +104,41 @@ public class TelegramBotCommand extends TelegramLongPollingBot {
                 setProductInDB(messageText);
                 executeSendMessage(method.receiveCreatedSendMessage(chatId, "Продукт добавлен в ассортимент"));
                 TEMP_DATA.remove(chatId);
+            } else if (TEMP_DATA.get(chatId).equals("Добавить категорию")) {
+                setPictureInDB(messageText);
+                executeSendMessage(method.receiveCreatedSendMessage(chatId, "Категория добавлена"));
+                TEMP_DATA.remove(chatId);
             }
 
 
             // Если update содержит изменённое сообщение
         } else if (update.hasCallbackQuery()) {
-            //String inlineMessageId = update.getCallbackQuery().getInlineMessageId();
             int messageId = update.getCallbackQuery().getMessage().getMessageId();
             long chatId = update.getCallbackQuery().getMessage().getChatId();
+            String stringChatId = String.valueOf(chatId);
+
             String callbackData = update.getCallbackQuery().getData();
 
             if (callbackData.contains("#product")) {
                 String productId = callbackData.replace("#product", "");
                 Optional<Product> product = productRepository.findById(Integer.parseInt(productId));
-
                 String[] sizeAndPrice = product.get().getSizeAndPrice().split(" ");
-                executeDeleteMessage(method.deleteMessage(chatId, messageId));
-                SendPhoto sendPhoto = method.forSaleProduct(chatId, product.get().getProductPhotoLinc(), product.get().getProductInfo(), productId, sizeAndPrice);
-                executePhotoMessage(sendPhoto);
+                //executeDeleteMessage(method.deleteMessage(chatId, messageId));
+                executeEditMessageMedia(method.forSaleProduct(chatId, messageId, product.get().getProductPhotoLinc(), product.get().getProductInfo(), productId, sizeAndPrice));
+                //executePhotoMessage(sendPhoto);
 
-            } else if (callbackData.contains("@addproduct")) {
+            } else if (callbackData.contains("#assortment")) { // "#assortmentraf"" "#assortmentsummer" "#assortmentwinter" "#assortmentall" "#assortmentclassic"
+                String chooseMenuCategory = callbackData.replace("#assortment", "");
+                Optional<MenuProductCategory> menuCategory = productMenuCategoryRepository.findByCategoryLikeIgnoreCase(chooseMenuCategory);
+                List<Product> productList = (ArrayList<Product>) productRepository.findAll();
+                executeEditMessageMedia(method.receiveProductMenu(chatId, messageId, chooseMenuCategory, menuCategory.get().getPictureLinc(), productList));
+
+            } else if (callbackData.contains("#allassortment")) {
+
+
+            }
+
+            else if (callbackData.contains("@addproduct")) {
                 String productIdAndSizeAndPrice = callbackData.replace("@addproduct", ""); // productIdAndSizeAndPrice - строка с данными: 103-300-150  productId-объём-цена
                 if (GROCERY_BASKET.get(chatId) == null) {
                     GROCERY_BASKET.put(chatId, productIdAndSizeAndPrice + "#");
@@ -149,7 +161,7 @@ public class TelegramBotCommand extends TelegramLongPollingBot {
                 }
 
             } else if (callbackData.contains("@adds")) {
-                String productIdAndPrice = callbackData.replace("@adds", ""); // productIdAndPrice - строка с данными: 103-_-150  productId-объём-цена
+                String productIdAndPrice = callbackData.replace("@adds", ""); // productIdAndPrice - строка с данными: 103-*-150  productId-объём-цена
                 String order = GROCERY_BASKET.get(chatId);
                 GROCERY_BASKET.put(chatId, order + productIdAndPrice + "#");
                 executeDeleteMessage(method.deleteMessage(chatId, messageId)); // TODO
@@ -224,7 +236,6 @@ public class TelegramBotCommand extends TelegramLongPollingBot {
             int messageId = Integer.parseInt(chatIdAndMessageId[1]);
 
 
-
             int orderNumber = method.createOrderNumber(ORDERS_NUMBER);
             System.out.println(orderNumber);
             ORDERS_NUMBER.add(orderNumber);
@@ -281,15 +292,6 @@ public class TelegramBotCommand extends TelegramLongPollingBot {
         }
     }
 
-    private void executeEditMessageCaption(EditMessageCaption editMessageCaption) {
-        try {
-            execute(editMessageCaption);
-        } catch (TelegramApiException e) {
-            System.out.println(e.getMessage());
-            //log.error("SendMessage execute error: " + e.getMessage());
-        }
-    }
-
 
     private void executeDeleteMessage(DeleteMessage deleteMessage) {
         try {
@@ -312,16 +314,27 @@ public class TelegramBotCommand extends TelegramLongPollingBot {
 
     // String productTitle, String productDescription, String productPhotoLinc, long price
     protected void setProductInDB(String productData) {
-        String[] splitData = productData.split(",");
-
+        String[] splitData = productData.split("_");
         Product product = new Product();
-        product.setProductCategory(splitData[0].toLowerCase());
-        product.setProductTitle(splitData[1]);
-        product.setProductDescription(splitData[2]);
-        product.setProductPhotoLinc(splitData[3]);
-        product.setSizeAndPrice(splitData[4]);
+        product.setMenuCategory(splitData[0].toLowerCase());
+        product.setProductCategory(splitData[1].toLowerCase());
+        product.setProductTitle(splitData[2]);
+        product.setProductDescription(splitData[3]);
+        product.setProductPhotoLinc(splitData[4]);
+        product.setSizeAndPrice(splitData[5]);
         productRepository.save(product);
     }
+
+
+    protected void setPictureInDB(String pictureData) {
+        String[] splitData = pictureData.split("_");
+        MenuProductCategory menuProductCategory = new MenuProductCategory();
+        System.out.println(splitData[0].toLowerCase() + " >>>> " + splitData[1]);
+        menuProductCategory.setCategory(splitData[0]);
+        menuProductCategory.setPictureLinc(splitData[1]);
+        productMenuCategoryRepository.save(menuProductCategory);
+    }
+
 
     private String receiveExecutedInvoiceLinc(CreateInvoiceLink createInvoiceLink) {
         String invoiceLincUrl = "null";
@@ -333,8 +346,6 @@ public class TelegramBotCommand extends TelegramLongPollingBot {
         }
         return invoiceLincUrl;
     }
-
-
 
 
 

@@ -11,12 +11,14 @@ public class User {
 
     @Id
     private long chatId;
+    private long phoneNumber;
+    private boolean isReceiveMessage;
+    private Timestamp registeredAt;
     private String firstname;
     private String lastname;
     private String patronymic;
     private String userName;
-    private Timestamp registeredAt;
-    private long phoneNumber;
+    private String birthday;
     private String orders;
 
     @Override

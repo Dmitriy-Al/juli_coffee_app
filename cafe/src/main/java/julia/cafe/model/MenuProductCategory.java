@@ -9,21 +9,19 @@ import lombok.extern.slf4j.Slf4j;
 @Slf4j
 @lombok.Setter
 @lombok.Getter
-@Entity(name = "productTable")
-public class Product {
+@Entity(name = "pictureTable")
+public class MenuProductCategory implements Comparable<MenuProductCategory>{
 
     @Id
     @GeneratedValue(strategy = GenerationType.AUTO)
     private int productId;
-    private String menuCategory;
-    private String productCategory;
-    private String productTitle;
-    private String productDescription;
-    private String productPhotoLinc;
-    private String sizeAndPrice;
+    private String category;
+    private String pictureLinc;
 
-    public String getProductInfo() {
-        return  productDescription;
+    @Override
+    public int compareTo(MenuProductCategory productCategory){
+        return this.category.length() - productCategory.category.length();
     }
+
 
 }
