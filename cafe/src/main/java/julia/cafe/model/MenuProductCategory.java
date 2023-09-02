@@ -9,7 +9,7 @@ import lombok.extern.slf4j.Slf4j;
 @Slf4j
 @lombok.Setter
 @lombok.Getter
-@Entity(name = "pictureTable")
+@Entity(name = "categoryTable")
 public class MenuProductCategory implements Comparable<MenuProductCategory>{
 
     @Id
