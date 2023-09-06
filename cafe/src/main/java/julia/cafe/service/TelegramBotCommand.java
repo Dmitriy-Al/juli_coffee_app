@@ -38,8 +38,8 @@ public class TelegramBotCommand extends TelegramLongPollingBot {
     private final HashMap<Long, String> USER_FIRST_NAME = new HashMap<>();
     private final TelegramBotMethods method = new TelegramBotMethods();
     private final String pictureLinc = "https://disk.yandex.ru/i/K331xGIlON2LxA";
-    private final String admin = "";
-    private final String barista = "";
+    private final String admin = "admin";
+    private final String barista = "barista";
 
 
     @Autowired
@@ -47,11 +47,11 @@ public class TelegramBotCommand extends TelegramLongPollingBot {
     @Autowired
     public ProductRepository productRepository;
     @Autowired
-    public MenuProductCategoryRepository productMenuCategoryRepository;
+    public MenuCategoryRepository menuCategoryRepository;
 
 
     public TelegramBotCommand() {
-        super("5684975537");
+        super("5684975537:AAHNI1ulaYG9U0ifSlOet3r6DClVoPWlgUk");
     }
 
     @Override
@@ -63,16 +63,25 @@ public class TelegramBotCommand extends TelegramLongPollingBot {
 
             if (messageText.equals("/start")) {
                 String userName = update.getMessage().getChat().getFirstName();
-                SendMessage sendMessage = method.receiveCreatedSendMessage(chatId, "Здравствуйте, " + userName + "!\nМы рады предложить вам (текст с дифирамбами)\n" + //TODO stringChatId
-                        "Вы можете заказать и оплатить ваш кофе прямо сейчас и забрать ваш готовый заказ без ожидания \uD83D\uDD50");
-                method.setCommonKeyBoard(sendMessage, GROCERY_BASKET.get(chatId));
-                executeSendMessage(sendMessage);
-                if (userRepository.findById(chatId).isEmpty() || userRepository.findById(chatId).get().getUserName().equals("Unregistered")) {
-                    setUserInDB(chatId, userName, false, null, null, null, null, null, null);
+                Optional<User> user = userRepository.findById(chatId);
+
+                if (user.isEmpty() || user.get().getFirstname() == null || !user.get().getFirstname().equals(admin)) {
+                    SendMessage sendMessage = method.receiveCreatedSendMessage(chatId, "Здравствуйте, " + userName + "!\nМы рады предложить вам (текст с дифирамбами)\n" + //TODO stringChatId
+                            "Вы можете заказать и оплатить ваш кофе прямо сейчас и забрать ваш готовый заказ без ожидания \uD83D\uDD50");
+                    method.setCommonKeyBoard(sendMessage, GROCERY_BASKET.get(chatId));
+                    executeSendMessage(sendMessage);
+                } else {
+                    SendMessage sendMessage = method.receiveCreatedSendMessage(chatId, "Здравствуйте, " + userName + "!");
+                    method.setAdminKeyBoard(sendMessage);
+                    executeSendMessage(sendMessage);
+                }
+
+                if (user.isEmpty() || user.get().getUserName().equals("Unregistered")) {
+                    setUserInDB(chatId, userName, true, null, null, null, null, null, null);
                 }
 
             } else if (messageText.equals("☕️" + " Кофе и напитки")) { // клавиатура
-                List<MenuProductCategory> menuCategories = (List<MenuProductCategory>) productMenuCategoryRepository.findAll();
+                List<MenuCategory> menuCategories = (List<MenuCategory>) menuCategoryRepository.findAll();
                 executePhotoMessage(method.receiveCategoryMenu(chatId, "https://disk.yandex.ru/i/1QoAtJVbb3U8TA", menuCategories));
 
             } else if (messageText.equals("⚙️" + " Регистрация и настройки")) {
@@ -103,45 +112,54 @@ public class TelegramBotCommand extends TelegramLongPollingBot {
             } else if (messageText.equals("Добавить новый продукт")) {
                 Optional<User> user = userRepository.findById(chatId);
                 if (user.isEmpty() || user.get().getFirstname() == null || !user.get().getFirstname().equals(admin)) {
-                    executeSendMessage(new SendMessage(stringChatId, "Такая команда отсутствует"));
+                    SendMessage sendMessage = new SendMessage(stringChatId, "Такая команда отсутствует");
+                    method.setCommonKeyBoard(sendMessage, GROCERY_BASKET.get(chatId));
+                    executeSendMessage(sendMessage);
                 } else {
-                    executeSendMessage(method.receiveCreatedSendMessage(chatId, "Введите через знак \"_\" категорию меню для продукта, вид продукта, название, описание, ссылку на изображение и объём-цену продукта через \"пробел\" (отсутствующее поле: *)"));
-                    TEMP_DATA.put(chatId, "Добавить новый продукт");
+                    TEMP_DATA.put(chatId, "#ADD_NEW_PRODUCT");
                 }
 
             } else if (messageText.equals("Добавить новую категорию меню")) {
                 Optional<User> user = userRepository.findById(chatId);
                 if (user.isEmpty() || user.get().getFirstname() == null || !user.get().getFirstname().equals(admin)) {
-                    executeSendMessage(new SendMessage(stringChatId, "Такая команда отсутствует"));
+                    SendMessage sendMessage = new SendMessage(stringChatId, "Такая команда отсутствует");
+                    method.setCommonKeyBoard(sendMessage, GROCERY_BASKET.get(chatId));
+                    executeSendMessage(sendMessage);
                 } else {
-                    executeSendMessage(method.receiveCreatedSendMessage(chatId, "Введите через знак \"_\" категорию для изображения и ссылку на него"));
-                    TEMP_DATA.put(chatId, "Добавить новую категорию меню");
+                    TEMP_DATA.put(chatId, "#ADD_NEW_MENU_CATEGORY");
                 }
 
             } else if (messageText.equals("Отправить сообщение пользователям")) {
                 Optional<User> user = userRepository.findById(chatId);
                 if (user.isEmpty() || user.get().getFirstname() == null || !user.get().getFirstname().equals(admin)) {
-                    executeSendMessage(new SendMessage(stringChatId, "Такая команда отсутствует"));
+                    SendMessage sendMessage = new SendMessage(stringChatId, "Такая команда отсутствует");
+                    method.setCommonKeyBoard(sendMessage, GROCERY_BASKET.get(chatId));
+                    executeSendMessage(sendMessage);
                 } else {
-
+                    TEMP_DATA.put(chatId, "#WRITE_MESSAGE_FOR_USERS");
                 }
 
-            }  else if (messageText.equals("Промо и аналитика")) {
+            } else if (messageText.equals("Промо и аналитика")) {
                 Optional<User> user = userRepository.findById(chatId);
                 if (user.isEmpty() || user.get().getFirstname() == null || !user.get().getFirstname().equals(admin)) {
-                    executeSendMessage(new SendMessage(stringChatId, "Такая команда отсутствует"));
+                    SendMessage sendMessage = new SendMessage(stringChatId, "Такая команда отсутствует");
+                    method.setCommonKeyBoard(sendMessage, GROCERY_BASKET.get(chatId));
+                    executeSendMessage(sendMessage);
                 } else {
-
+                    SendMessage sendMessage = new SendMessage(stringChatId, "Промо и аналитика");
+                    method.setCommonKeyBoard(sendMessage, GROCERY_BASKET.get(chatId));
+                    executeSendMessage(sendMessage);
                 }
 
             } else if (messageText.equals("Удалить")) {
                 Optional<User> user = userRepository.findById(chatId);
                 if (user.isEmpty() || user.get().getFirstname() == null || !user.get().getFirstname().equals(admin)) {
-                    executeSendMessage(new SendMessage(stringChatId, "Такая команда отсутствует"));
+                    SendMessage sendMessage = new SendMessage(stringChatId, "Такая команда отсутствует");
+                    method.setCommonKeyBoard(sendMessage, GROCERY_BASKET.get(chatId));
+                    executeSendMessage(sendMessage);
                 } else {
                     executeSendMessage(method.receiveMenuForDelete(stringChatId, "В этом разделе вы можете:"));
                 }
-
 
             } else if (TEMP_DATA.get(chatId) == null) {
                 Optional<User> user = userRepository.findById(chatId);
@@ -157,14 +175,68 @@ public class TelegramBotCommand extends TelegramLongPollingBot {
             }
 
 
-            if (TEMP_DATA.get(chatId).equals("Добавить новый продукт")) {
-                setProductInDB(messageText);
-                executeSendMessage(method.receiveCreatedSendMessage(chatId, "Продукт добавлен в ассортимент"));
+            // Блок работает, если в HashMap TEMP_DATA были добавлены какие-то инструкции
+            if (TEMP_DATA.get(chatId).equals("#ADD_NEW_PRODUCT")) {
+                executeSendMessage(method.receiveCreatedSendMessage(chatId, "❗Вводите текст без пробелов. Разделяя части текста символом  _  введите категорию меню для продукта, вид продукта, название, описание и ссылку на изображение, а объём-цену продукта введите через \"пробел\". Отсутствующее значение обозначьте * (например, объём сиропа *)." +
+                        "\nОбразец 1): Лето_кофе_Nescafe_очень вкусный кофе_https://disk.yandex.ru/i/ _250-100 350-200 450-300\nОбразец 2): Классика_чай_Lipton_листовой чай_https://disk.yandex.ru/i/ _350-200\nОбразец 3): *_сироп_Вишневый сироп_самый вкусный сироп_https://disk.yandex.ru/i/ _*-100\nОбразец 4): *_добавка_Шоколад_шоколадная добавка_https://disk.yandex.ru/i/ _*-150\n "));
+                TEMP_DATA.put(chatId, "#SET_PRODUCT_IN_DB");
+
+            } else if (TEMP_DATA.get(chatId).equals("#SET_PRODUCT_IN_DB")) {
                 TEMP_DATA.remove(chatId);
-            } else if (TEMP_DATA.get(chatId).equals("Добавить категорию")) {
-                setPictureInDB(messageText);
-                executeSendMessage(method.receiveCreatedSendMessage(chatId, "Категория добавлена"));
+                SendMessage sendMessage;
+                String[] productData = messageText.split("_");
+                if (method.isProductValid(productData)) {
+                    setProductInDB(productData);
+                    sendMessage = new SendMessage(stringChatId, "Продукт добавлен в ассортимент");
+                } else {
+                    sendMessage = new SendMessage(stringChatId, "Ошибка ввода данных. Продукт не был добавлен в ассортимент");
+                }
+                method.setAdminKeyBoard(sendMessage);
+                executeSendMessage(sendMessage);
+
+            } else if (TEMP_DATA.get(chatId).equals("#ADD_NEW_MENU_CATEGORY")) {
+                executeSendMessage(method.receiveCreatedSendMessage(chatId, "❗Ведите разделяя символом  _  категорию меню и ссылку на изображение.\nОбразец 1): Лето_https://disk.yandex.ru/i/\nОбразец 2): Классика_https://disk.yandex.ru/i/"));
+                TEMP_DATA.put(chatId, "#SET_MENU_CATEGORY_IN_DB");
+
+            } else if (TEMP_DATA.get(chatId).equals("#SET_MENU_CATEGORY_IN_DB")) {
                 TEMP_DATA.remove(chatId);
+                SendMessage sendMessage;
+                String[] categoryData = messageText.split("_");
+                if (categoryData.length == 2 && categoryData[1].contains("https://")) {
+                    setCategoryInDB(messageText);
+                    sendMessage = new SendMessage(stringChatId, "Категория добавлена");
+                } else {
+                    sendMessage = new SendMessage(stringChatId, "Ошибка ввода данных. Категория не была добавлена в ассортимент");
+                }
+                method.setAdminKeyBoard(sendMessage);
+                executeSendMessage(sendMessage);
+
+            } else if (TEMP_DATA.get(chatId).equals("#WRITE_MESSAGE_FOR_USERS")) {
+                SendMessage sendMessage = new SendMessage(stringChatId, "❗Внимание! Введённое сообщение будет отправлено всем пользователям! Сообщение длинной менее чем 3 символа не будет доставлено пользователям.\nВведите текст сообщения, а затем отправьте его. Сообщение длинной менее чем 3 символа не будет доставлено пользователям");
+                method.setAdminKeyBoard(sendMessage);
+                executeSendMessage(sendMessage);
+                TEMP_DATA.put(chatId, "#SEND_MESSAGE_TO_USERS");
+
+            } else if (TEMP_DATA.get(chatId).equals("#SEND_MESSAGE_TO_USERS")) {
+                TEMP_DATA.remove(chatId);
+                SendMessage sendMessage = new SendMessage();
+                if (messageText.length() > 3){
+                    Iterable<User> users = userRepository.findAll();
+                    for (User user : users){
+                        if(user.isAgreeGetMessage()){
+                            sendMessage.setText(messageText);
+                            sendMessage.setChatId(user.getChatId());
+                            executeSendMessage(sendMessage);
+                        }
+                    }
+                    sendMessage.setText("Сообщение отправлено всем пользователям");
+                } else {
+                    sendMessage.setText("Отправка сообщения отменена");
+                }
+                sendMessage.setChatId(chatId);
+                method.setAdminKeyBoard(sendMessage);
+                executeSendMessage(sendMessage);
+
             } else if (TEMP_DATA.get(chatId).equals("#REGISTER")) {
                 if (messageText.length() < 2 || messageText.length() > 15) {
                     SendMessage sendMessage = new SendMessage(stringChatId, "Имя не может содержать меньше 2 и больше 15 символов");
@@ -197,7 +269,7 @@ public class TelegramBotCommand extends TelegramLongPollingBot {
                     setUserInDB(chatId, newUser.getUserName(), newUser.isAgreeGetMessage(), USER_FIRST_NAME.get(chatId), newUser.getLastname(), newUser.getPatronymic(), USER_BIRTHDAY.get(chatId), newUser.getRegisteredDate(), newUser.getPurchase());
 
                     if (USER_FIRST_NAME.get(chatId).equals(admin)) {
-                        SendMessage sendMessage = new SendMessage(stringChatId, "Ваша учётная запись зарегистрирована в качестве учётной запись администратора");
+                        SendMessage sendMessage = new SendMessage(stringChatId, "Ваша учётная запись зарегистрирована в качестве учётной записи администратора");
                         method.setAdminKeyBoard(sendMessage);
                         executeSendMessage(sendMessage);
                     } else if (USER_FIRST_NAME.get(chatId).equals("cafe")) {
@@ -231,7 +303,7 @@ public class TelegramBotCommand extends TelegramLongPollingBot {
 
             } else if (callbackData.contains("#assortment")) { // "#assortmentraf" "#assortmentsummer" "#assortmentwinter" "#assortmentall" "#assortmentclassic"
                 String chooseMenuCategory = callbackData.replace("#assortment", "");
-                Optional<MenuProductCategory> menuCategory = productMenuCategoryRepository.findByCategoryLikeIgnoreCase(chooseMenuCategory);
+                Optional<MenuCategory> menuCategory = menuCategoryRepository.findByCategoryLikeIgnoreCase(chooseMenuCategory);
                 List<Product> productList = (ArrayList<Product>) productRepository.findAll();
                 executeEditMessageMedia(method.receiveProductAssortment(chatId, messageId, chooseMenuCategory, menuCategory.get().getPictureLinc(), productList));
 
@@ -316,7 +388,7 @@ public class TelegramBotCommand extends TelegramLongPollingBot {
                     productData[i] = product.get().getProductCategory() + "  " + product.get().getProductTitle() + "-" + temp;
                     labeledPriceList.add(new LabeledPrice(product.get().getProductTitle(), productPrice * 100));
                 }
-                String payLinc = receiveExecutedInvoiceLinc(method.payOrder("https://disk.yandex.ru/i/K331xGIlON2LxA", /*"8"*/"62053", labeledPriceList, chatId, messageId));
+                String payLinc = receiveExecutedInvoiceLinc(method.payOrder("https://disk.yandex.ru/i/K331xGIlON2LxA", /*"401643678:TEST:95e3e338-2311-4825-bd6f-0de31a0b5ce8"*/"381764678:TEST:62053", labeledPriceList, chatId, messageId));
 
                 executeEditMessageText(method.approveOrder(chatId, messageId, "После оплаты, ваш заказ будет готов к " + time, payLinc));
             } else if (callbackData.contains("#agree")) {
@@ -342,9 +414,24 @@ public class TelegramBotCommand extends TelegramLongPollingBot {
                     executeEditMessageText(method.receiveEditMessageText(chatId, messageId, "Вы являетесь зарегистрированным пользователем"));
                 }
 
+            } else if (callbackData.contains("#delproduct")) {
+                List<Product> productList = (ArrayList<Product>) productRepository.findAll();
+                executeEditMessageText(method.receiveProductForDelete(chatId, messageId, "Выберите продукт для удаления", productList));
 
+            } else if (callbackData.contains("#removeproduct")) {
+                int productId = Integer.parseInt(callbackData.replace("#removeproduct", ""));
+                productRepository.deleteById(productId);
+                executeEditMessageText(method.receiveEditMessageText(chatId, messageId, "Продукт удалён из базы"));
+
+            } else if (callbackData.contains("#delcategory")) {
+                List<MenuCategory> categoryList = (ArrayList<MenuCategory>) menuCategoryRepository.findAll();
+                executeEditMessageText(method.receiveCategoryForDelete(chatId, messageId, "Выберите категорию для удаления", categoryList));
+
+            } else if (callbackData.contains("#removecategory")) {
+                String category = callbackData.replace("#removecategory", "");
+                menuCategoryRepository.deleteById(menuCategoryRepository.findByCategoryLikeIgnoreCase(category).get().getCategoryId()); // TODO реализовать удаление по-человечески
+               executeEditMessageText(method.receiveEditMessageText(chatId, messageId, "Категория удалена"));
             }
-
 
             //  Pre Checkout Query отвечает за обработку и утверждение платежа перед тем, как пользователь его совершит. Так можно проверить доступность товара на складе или уточнить стоимость.
         } else if (update.hasPreCheckoutQuery()) {
@@ -388,7 +475,7 @@ public class TelegramBotCommand extends TelegramLongPollingBot {
                 newUser = new User(chatId, us.get().getUserName(), us.get().isAgreeGetMessage(), us.get().getFirstname(), us.get().getLastname(), us.get().getPatronymic(), us.get().getBirthday(), us.get().getRegisteredDate(), us.get().getPurchase());
                 userRepository.deleteById(chatId);
             } else {
-                newUser = new User(chatId, "Unregistered", false, null, null, null, null, null, null);
+                newUser = new User(chatId, "Unregistered", true, null, null, null, null, null, null);
             }
 
             DateTimeFormatter dateTimeFormatter = DateTimeFormatter.ofPattern("dd MMMM yyyy  HH:mm");
@@ -416,7 +503,7 @@ public class TelegramBotCommand extends TelegramLongPollingBot {
 
     @Override
     public String getBotUsername() {
-        return "T";
+        return "TestDemoUnicNameBot";
     }
 
 
@@ -499,25 +586,24 @@ public class TelegramBotCommand extends TelegramLongPollingBot {
     }
 
 
-    private void setProductInDB(String productData) { // String productTitle, String productDescription, String productPhotoLinc, long price
-        String[] splitData = productData.split("_");
+    private void setProductInDB(String[] productData) { // String productTitle, String productDescription, String productPhotoLinc, long price
         Product product = new Product();
-        product.setMenuCategory(splitData[0].toLowerCase());
-        product.setProductCategory(splitData[1].toLowerCase());
-        product.setProductTitle(splitData[2]);
-        product.setProductDescription(splitData[3]);
-        product.setProductPhotoLinc(splitData[4]);
-        product.setSizeAndPrice(splitData[5]);
+        product.setMenuCategory(productData[0].toLowerCase());
+        product.setProductCategory(productData[1].toLowerCase());
+        product.setProductTitle(productData[2]);
+        product.setProductDescription(productData[3]);
+        product.setProductPhotoLinc(productData[4]);
+        product.setSizeAndPrice(productData[5]);
         productRepository.save(product);
     }
 
 
-    private void setPictureInDB(String pictureData) {
+    private void setCategoryInDB(String pictureData) {
         String[] splitData = pictureData.split("_");
-        MenuProductCategory menuProductCategory = new MenuProductCategory();
-        menuProductCategory.setCategory(splitData[0]);
-        menuProductCategory.setPictureLinc(splitData[1]);
-        productMenuCategoryRepository.save(menuProductCategory);
+        MenuCategory categoryMenu = new MenuCategory();
+        categoryMenu.setCategory(splitData[0]);
+        categoryMenu.setPictureLinc(splitData[1]);
+        menuCategoryRepository.save(categoryMenu);
     }
 
 

@@ -1,6 +1,6 @@
 package julia.cafe.service;
 
-import julia.cafe.model.MenuProductCategory;
+import julia.cafe.model.MenuCategory;
 import julia.cafe.model.Product;
 import julia.cafe.model.ProductComparator;
 import lombok.extern.slf4j.Slf4j;
@@ -352,7 +352,7 @@ public class TelegramBotMethods {
     }
 
 
-    protected SendPhoto receiveCategoryMenu(long chatId, String pictureLinc, List<MenuProductCategory> menuCategories) {
+    protected SendPhoto receiveCategoryMenu(long chatId, String pictureLinc, List<MenuCategory> menuCategories) {
         SendPhoto sendPhoto = new SendPhoto();
         sendPhoto.setChatId(chatId);
         sendPhoto.setPhoto(new InputFile(pictureLinc));
@@ -478,7 +478,7 @@ public class TelegramBotMethods {
         List<List<InlineKeyboardButton>> rowsInline = new ArrayList<>(); // коллекция коллекций с горизонтальным рядом кнопок, создаёт вертикальный ряд кнопок
         List<InlineKeyboardButton> firstRowInlineButton = new ArrayList<>();
         List<InlineKeyboardButton> secondRowInlineButton = new ArrayList<>();
-        List<InlineKeyboardButton> thirdRowInlineButton = new ArrayList<>();
+        //List<InlineKeyboardButton> thirdRowInlineButton = new ArrayList<>();
 
         InlineKeyboardButton productButton = new InlineKeyboardButton();
         productButton.setText("Удалить продукт");
@@ -488,22 +488,78 @@ public class TelegramBotMethods {
         categoryButton.setText("Удалить категорию меню");
         categoryButton.setCallbackData("#delcategory");
 
-        InlineKeyboardButton blockUserButton = new InlineKeyboardButton();
-        blockUserButton.setText("Заблокировать пользователя");
-        blockUserButton.setCallbackData("#blockuser");
+        //InlineKeyboardButton blockUserButton = new InlineKeyboardButton();
+        //blockUserButton.setText("Заблокировать пользователя");
+        //blockUserButton.setCallbackData("#blockuser");
 
         firstRowInlineButton.add(productButton);
         rowsInline.add(firstRowInlineButton);
         secondRowInlineButton.add(categoryButton);
         rowsInline.add(secondRowInlineButton);
-        thirdRowInlineButton.add(blockUserButton);
-        rowsInline.add(thirdRowInlineButton);
+        //thirdRowInlineButton.add(blockUserButton);
+        //rowsInline.add(thirdRowInlineButton);
 
         inlineKeyboardMarkup.setKeyboard(rowsInline);
         sendMessage.setReplyMarkup(inlineKeyboardMarkup);
         return sendMessage;
     }
 
+
+    // Метод возвращает true, если при добавлении продукта введённые данные валидны
+    public boolean isProductValid(String[] productData){
+        if(productData.length != 6 || !productData[4].contains("https://")){
+            return false;
+        }
+        try{
+            String stringNumber = productData[5].replaceAll(" ", "").replaceAll("\\*", "").replaceAll("-", "");
+            Long parseNumber = Long.parseLong(stringNumber);System.out.println("test 4");
+        } catch (NumberFormatException e){System.out.println("test 6");
+            return false;
+        }
+        return true;
+    }
+
+
+    // Метод создаёт меню с продуктами для удаления из бд
+    public EditMessageText receiveProductForDelete(long chatId, int messageId, String messageText, List<Product> productList) {
+        EditMessageText editMessageText = receiveEditMessageText(chatId, messageId, messageText);
+        InlineKeyboardMarkup inlineKeyboardMarkup = new InlineKeyboardMarkup();
+        List<List<InlineKeyboardButton>> rowsInline = new ArrayList<>();
+
+        productList.forEach(product -> {
+            List<InlineKeyboardButton> rowInlineButton = new ArrayList<>();
+            InlineKeyboardButton productButton = new InlineKeyboardButton();
+            productButton.setText(product.getProductTitle());
+            productButton.setCallbackData("#removeproduct" + product.getProductId());
+            rowInlineButton.add(productButton);
+            rowsInline.add(rowInlineButton);
+        });
+
+        inlineKeyboardMarkup.setKeyboard(rowsInline);
+        editMessageText.setReplyMarkup(inlineKeyboardMarkup);
+        return editMessageText;
+    }
+
+
+    // Метод создаёт меню с продуктами для удаления из бд
+    public EditMessageText receiveCategoryForDelete(long chatId, int messageId, String messageText, List<MenuCategory> productList) {
+        EditMessageText editMessageText = receiveEditMessageText(chatId, messageId, messageText);
+        InlineKeyboardMarkup inlineKeyboardMarkup = new InlineKeyboardMarkup();
+        List<List<InlineKeyboardButton>> rowsInline = new ArrayList<>();
+
+        productList.forEach(category -> {
+            List<InlineKeyboardButton> rowInlineButton = new ArrayList<>();
+            InlineKeyboardButton productButton = new InlineKeyboardButton();
+            productButton.setText(category.getCategory());
+            productButton.setCallbackData("#removecategory" + category.getCategory());
+            rowInlineButton.add(productButton);
+            rowsInline.add(rowInlineButton);
+        });
+
+        inlineKeyboardMarkup.setKeyboard(rowsInline);
+        editMessageText.setReplyMarkup(inlineKeyboardMarkup);
+        return editMessageText;
+    }
 
 
 

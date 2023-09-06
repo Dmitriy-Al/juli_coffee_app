@@ -10,17 +10,17 @@ import lombok.extern.slf4j.Slf4j;
 @lombok.Setter
 @lombok.Getter
 @Entity(name = "categoryTable")
-public class MenuProductCategory implements Comparable<MenuProductCategory>{
+public class MenuCategory implements Comparable<MenuCategory>{
 
     @Id
     @GeneratedValue(strategy = GenerationType.AUTO)
-    private int productId;
+    private int categoryId;
     private String category;
     private String pictureLinc;
 
     @Override
-    public int compareTo(MenuProductCategory productCategory){
-        return this.category.length() - productCategory.category.length();
+    public int compareTo(MenuCategory menuCategory){
+        return this.category.length() - menuCategory.category.length();
     }
 
 
