@@ -190,8 +190,8 @@ public class TelegramBotCommand extends TelegramLongPollingBot {
 
             // Блок работает, если в HashMap TEMP_DATA были добавлены какие-то инструкции
             if (TEMP_DATA.get(chatId).equals("#ADD_NEW_PRODUCT")) {
-                executeSendMessage(method.receiveCreatedSendMessage(chatId, "❗Вводите текст без пробелов. Разделяя части текста символом  _  введите категорию меню для продукта_вид продукта_название продукта_описание_ссылку на изображение_объём-цену продукта введите через \"пробел\". Отсутствующее значение обозначьте * (например, объём сиропа *), а затем отправьте сообщение." +
-                        "\nОбразец 1): Лето_кофе_Nescafe_очень вкусный кофе_https://disk.yandex.ru/i/ _250-100 350-200 450-300\nОбразец 2): Классика_чай_Lipton_листовой чай_https://disk.yandex.ru/i/ _350-200\nОбразец 3): *_сироп_Вишневый сироп_самый вкусный сироп_*_*-100\nОбразец 4): *_добавка_Шоколад_шоколадная добавка_*_*-150\n "));
+                executeSendMessage(method.receiveCreatedSendMessage(chatId, "❗Вводите текст без пробелов. Разделяя части текста символом  _  введите категорию меню для продукта_вид продукта_название продукта_описание_ссылку на изображение_объём_цену продукта. Отсутствующее значение обозначьте * (например, объём сиропа *), а затем отправьте сообщение." +
+                        "\nОбразец 1): Лето_кофе_Nescafe_очень вкусный кофе_https://disk.yandex.ru/i/ _250_100\nОбразец 2): Классика_чай_Lipton_листовой чай_https://disk.yandex.ru/i/ _350_200\nОбразец 3): *_сироп_Вишневый сироп_самый вкусный сироп_*_*_100\nОбразец 4): *_добавка_Шоколад_шоколадная добавка_*_*_150\n "));
                 TEMP_DATA.put(chatId, "#SET_PRODUCT_IN_DB");
 
             } else if (TEMP_DATA.get(chatId).equals("#SET_PRODUCT_IN_DB")) {
@@ -338,14 +338,15 @@ public class TelegramBotCommand extends TelegramLongPollingBot {
                 String productId = callbackData.replace("#product", "");
                 Optional<Product> product = productRepository.findById(Integer.parseInt(productId));
                 executeDeleteMessage(method.deleteMessage(chatId, messageId));
+                //executeEditMessageMedia(method.forSaleProduct(chatId, messageId, product.get().getProductPhotoLinc(), product.get().getProductInfo(), productId, sizeAndPrice));
                 executePhotoMessage(method.forSaleProduct(chatId, product));
 
-            } else if (callbackData.contains("#assortment")) { // "#assortmentraf" "#assortmentsummer" "#assortmentwinter" "#assortmentall" "#assortmentclassic"
+            } else if (callbackData.contains("#menucategory")) { // "#assortmentraf" "#assortmentsummer" "#assortmentwinter" "#assortmentall" "#assortmentclassic"
                 // String chooseMenuCategory = callbackData.replace("#assortment", "");
                 //Optional<MenuCategory> menuCategory = menuCategoryRepository.findByCategoryLikeIgnoreCase(chooseMenuCategory);
-                int chooseMenuCategory = Integer.parseInt(callbackData.replace("#assortment", ""));
-                Optional<MenuCategory> menuCategory = menuCategoryRepository.findById(chooseMenuCategory);
-                List<Product> productList = (List<Product>) productRepository.findAll();
+                int chooseMenuCategory = Integer.parseInt(callbackData.replace("#menucategory", ""));
+                Optional<MenuCategory> menuCategory = menuCategoryRepository.findById(chooseMenuCategory); // категории меню
+                List<Product> productList = (List<Product>) productRepository.findAll(); // список продуктов
                 executeEditMessageMedia(method.receiveProductAssortment(chatId, messageId, menuCategory.get().getCategory(), menuCategory.get().getPictureLinc(), productList));
 
             } else if (callbackData.contains("#changepic")) {
@@ -361,8 +362,44 @@ public class TelegramBotCommand extends TelegramLongPollingBot {
 
             } else if (callbackData.contains("!")) {
 
-
             } else if (callbackData.contains("#addproduct")) {
+                Optional<Product> product = productRepository.findById(Integer.parseInt(callbackData.replace("#addproduct", "")));
+                GROCERY.computeIfAbsent(chatId, k -> new ArrayList<>());
+                List<Optional<Product>> productStream = GROCERY.get(chatId).stream().filter(prd -> !prd.get().getProductCategory().equalsIgnoreCase("добавка")).filter(prd -> !prd.get().getProductCategory().equalsIgnoreCase("сироп")).toList();
+                System.out.println(GROCERY.get(chatId).size() + " <> " + productStream.size());
+
+                // Ограничение позиций в заказе = 3 кофе  TODO сделать не хардкодом
+                if (productStream.size() >= 3 && !product.get().getProductCategory().equalsIgnoreCase("добавка") && !product.get().getProductCategory().equalsIgnoreCase("сироп")) {
+                    executeDeleteMessage(method.deleteMessage(chatId, messageId));
+                    SendMessage sendMessage = method.receiveCreatedSendMessage(chatId, "Корзина заполнена максимальным количеством позиций");
+                    method.setCommonKeyBoard(sendMessage, GROCERY_BASKET.get(chatId));// TODO сделать GROCERY_BASKE
+                    executeSendMessage(sendMessage);
+                } else {
+                    GROCERY.get(chatId).add(product);
+                    if (product.get().getProductCategory().equalsIgnoreCase("кофе")) {
+                        ArrayList<Product> syrups = (ArrayList<Product>) productRepository.findByProductCategory("сироп");
+                        executeEditMessageMedia(method.receiveSyrupMenu(chatId, messageId, SYRUP_PICTURE_LINK, product.get().getProductCategory(), syrups));
+                    } else if (product.get().getProductCategory().equalsIgnoreCase("раф")) {
+                        // ArrayList<Product> syrups = (ArrayList<Product>) productRepository.findByProductCategory("сироп").stream().peek(syrup -> syrup.setProductPrice("0"));
+                        ArrayList<Product> syrups = (ArrayList<Product>) productRepository.findByProductCategory("сироп");
+                        for(Product syr : syrups){
+                            syr.setProductPrice("0");
+                        }
+                        executeEditMessageMedia(method.receiveSyrupMenu(chatId, messageId, SYRUP_PICTURE_LINK, product.get().getProductCategory(), syrups));
+                    } else {
+                        executeDeleteMessage(method.deleteMessage(chatId, messageId));
+                        SendMessage sendMessage = method.receiveCreatedSendMessage(chatId, "Ваш заказ добавлен в корзину");
+                        method.setCommonKeyBoard(sendMessage, GROCERY_BASKET.get(chatId));
+                        executeSendMessage(sendMessage);
+                    }
+                }
+
+
+            } else if (callbackData.contains("#cancelproduct")) {
+                executeDeleteMessage(method.deleteMessage(chatId, messageId));
+
+            } else if (callbackData.contains("!!!!!!!!!!!!!!!")) {
+
             /*    if (GROCERY_BASKET.get(chatId) != null && GROCERY_BASKET.get(chatId).length() >= 40) { // Ограничение позиций в заказе (одна позиция ~10 символов) TODO сделать не хардкодом
                     executeDeleteMessage(method.deleteMessage(chatId, messageId));
                     SendMessage sendMessage = method.receiveCreatedSendMessage(chatId, "Корзина заполнена максимальным количеством позиций");bvjh
@@ -403,7 +440,7 @@ public class TelegramBotCommand extends TelegramLongPollingBot {
                     if (product.get().getProductCategory().equalsIgnoreCase("кофе") || product.get().getProductCategory().equalsIgnoreCase("раф")) {
                         ArrayList<Product> products = (ArrayList<Product>) productRepository.findAll();
                         List<Product> syrupStream = products.stream().filter(prod -> prod.getProductCategory().equals("сироп")).toList();
-                        executeEditMessageMedia(method.receiveSupplementMenu(chatId, messageId, SYRUP_PICTURE_LINK, product.get().getProductCategory(), syrupStream));
+                        executeEditMessageMedia(method.receiveSyrupMenu(chatId, messageId, SYRUP_PICTURE_LINK, product.get().getProductCategory(), syrupStream));
 
                     } else {
                         executeDeleteMessage(method.deleteMessage(chatId, messageId));
@@ -413,28 +450,30 @@ public class TelegramBotCommand extends TelegramLongPollingBot {
                     }
                 }
 
-            } else if (callbackData.contains("#sup")) { //  #addsyrup
-           /*   String productIdAndPrice = callbackData.replace("#addsyrup", ""); // productIdAndPrice - строка с данными: 103-*-150  productId-объём-цена
-                String order = GROCERY_BASKET.get(chatId);
-                GROCERY_BASKET.put(chatId, order + productIdAndPrice + "#");
-                ArrayList<Product> products = (ArrayList<Product>) productRepository.findAll();
-                List<Product> supplementStream = products.stream().filter(prod -> prod.getProductCategory().equals("добавка")).toList();
-                executeEditMessageMedia(method.receiveSupplementMenu(chatId, messageId, SUPPLEMENT_MAIN_PICTURE_LINK, supplementStream));
-            */
-                ArrayList<Product> products = (ArrayList<Product>) productRepository.findAll();
-                List<Product> supplementStream = products.stream().filter(prod -> prod.getProductCategory().equals("добавка")).toList();
-                executeEditMessageMedia(method.receiveSupplementMenu(chatId, messageId, SUPPLEMENT_MAIN_PICTURE_LINK, "nocategory", supplementStream));
+            } else if (callbackData.contains("#addsyrup")) {
+                Optional<Product> syrup = productRepository.findById(Integer.parseInt(callbackData.replace("#addsyrup", "")));
+                GROCERY.get(chatId).add(syrup);
+                ArrayList<Product> supplements = (ArrayList<Product>) productRepository.findByProductCategory("добавка");
+                executeEditMessageMedia(method.receiveSupplementMenu(chatId, messageId, SUPPLEMENT_MAIN_PICTURE_LINK, supplements));
 
-                if (callbackData.contains("#supadd")) {
-                    Optional<Product> product = productRepository.findById(Integer.parseInt(callbackData.replace("#addsyrup", "")));
-                    GROCERY.get(chatId).add(product);
-                }
+            } else if (callbackData.contains("#nosyrup")) {
+                    ArrayList<Product> supplements = (ArrayList<Product>) productRepository.findByProductCategory("добавка");
+                    executeEditMessageMedia(method.receiveSupplementMenu(chatId, messageId, SUPPLEMENT_MAIN_PICTURE_LINK, supplements));
 
-            } else if (callbackData.contains("#withoutsup")) {
+            } else if (callbackData.contains("#addsup")) {
+                Optional<Product> supplement = productRepository.findById(Integer.parseInt(callbackData.replace("#addsup", "")));
+                GROCERY.get(chatId).add(supplement);
                 executeDeleteMessage(method.deleteMessage(chatId, messageId));
                 SendMessage sendMessage = method.receiveCreatedSendMessage(chatId, "Ваш заказ находится в корзине");
                 method.setCommonKeyBoard(sendMessage, GROCERY_BASKET.get(chatId));
                 executeSendMessage(sendMessage);
+
+            } else if (callbackData.contains("#nosup")) {
+                executeDeleteMessage(method.deleteMessage(chatId, messageId));
+                SendMessage sendMessage = method.receiveCreatedSendMessage(chatId, "Ваш заказ находится в корзине");
+                method.setCommonKeyBoard(sendMessage, GROCERY_BASKET.get(chatId));
+                executeSendMessage(sendMessage);
+
 
           /*   } else if (callbackData.contains("#nosyrup")) {
                 ArrayList<Product> products = (ArrayList<Product>) productRepository.findAll();
@@ -683,7 +722,8 @@ public class TelegramBotCommand extends TelegramLongPollingBot {
         product.setProductTitle(productData[2]);
         product.setProductDescription(productData[3]);
         product.setProductPhotoLinc(productData[4]);
-        product.setSizeAndPrice(productData[5]);
+        product.setProductSize(productData[5]);
+        product.setProductPrice(productData[6]);
         productRepository.save(product);
     }
 

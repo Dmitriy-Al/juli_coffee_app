@@ -20,7 +20,8 @@ public class Product {
     private String productTitle;
     private String productDescription;
     private String productPhotoLinc;
-    private String sizeAndPrice;
+    private String productSize;
+    private String productPrice;
 
     public String getProductInfo() {
         return  productDescription;
