@@ -113,69 +113,6 @@ public class TelegramBotMethods {
     }
 
 
-    // Отправка сообщения
-    protected SendMessage receiveCreatedSendMessage(long chatId, String text) {
-        SendMessage sendMessage = new SendMessage();
-        sendMessage.setChatId(chatId);
-        sendMessage.setText(text);
-        return sendMessage;
-    }
-
-
-    protected EditMessageText receiveEditMessageText(long chatId, int messageId, String messageText) {
-        EditMessageText editMessageText = new EditMessageText();
-        editMessageText.setChatId(chatId);
-        editMessageText.setMessageId(messageId);
-        editMessageText.setText(messageText);
-        return editMessageText;
-    }
-
-
-    protected DeleteMessage deleteMessage(long chatId, int messageId) {
-        DeleteMessage deleteMessage = new DeleteMessage();
-        deleteMessage.setMessageId(messageId);
-        deleteMessage.setChatId(chatId);
-        return deleteMessage;
-    }
-
-
-    protected SendMessage receiveGroceryBasket(String chatId, String messageText, String[] productData) {
-        StringBuilder stringBuilder = new StringBuilder();
-        stringBuilder.append(messageText);
-
-        InlineKeyboardMarkup inlineKeyboardMarkup = new InlineKeyboardMarkup();
-        List<List<InlineKeyboardButton>> rowsInline = new ArrayList<>(); // коллекция коллекций с горизонтальным рядом кнопок, создаёт вертикальный ряд кнопок
-        List<InlineKeyboardButton> firstRowInlineButton = new ArrayList<>();
-        List<InlineKeyboardButton> secondRowInlineButton = new ArrayList<>();
-
-        for (int i = 0; i < productData.length; i++) {
-            String[] orders = productData[i].split("-");
-            stringBuilder.append("\n\n✔️  ").append(orders[0]).append("   ").append(orders[3]).append(" ₽   ");
-            if (!orders[2].contains("*")) {
-                stringBuilder.append(orders[2]).append(" ml");
-            }
-        }
-
-        InlineKeyboardButton clearButton = new InlineKeyboardButton();
-        clearButton.setText("Очистить корзину  \uD83D\uDDD1");
-        clearButton.setCallbackData("#delorder");
-
-        InlineKeyboardButton orderButton = new InlineKeyboardButton();
-        orderButton.setText("Забрать заказ в...  \uD83D\uDD59"); // Оформить заказ
-        orderButton.setCallbackData("#settime" + 1);
-
-        firstRowInlineButton.add(clearButton);
-        secondRowInlineButton.add(orderButton);
-        rowsInline.add(firstRowInlineButton);
-        rowsInline.add(secondRowInlineButton);
-
-        SendMessage sendMessage = new SendMessage(chatId, stringBuilder.toString());
-
-        inlineKeyboardMarkup.setKeyboard(rowsInline);
-        sendMessage.setReplyMarkup(inlineKeyboardMarkup);
-
-        return sendMessage;
-    }
 
 
     protected CreateInvoiceLink payOrder(long chatId, int messageId, String photoUrl, String providerToken, List<LabeledPrice> labeledPriceList) {
@@ -205,8 +142,8 @@ public class TelegramBotMethods {
 
     protected EditMessageText setTime(long chatId, int messageId, String messageText, int changeTime) {
         DateTimeFormatter dateTimeFormatter = DateTimeFormatter.ofPattern("HH:mm");
-        //LocalTime time = LocalTime.now();
-        LocalTime time = LocalTime.parse("21:28:00");
+        LocalTime time = LocalTime.now();
+        //LocalTime time = LocalTime.parse("21:28:00");
         int setTime = 5 * changeTime;
         LocalTime updateTime = time.plusMinutes(setTime);
         String timeString = dateTimeFormatter.format(updateTime);
@@ -277,19 +214,6 @@ public class TelegramBotMethods {
     }
 
 
-    protected int createOrderNumber(LinkedHashMap<Integer, String> orderNumbers) {
-        Integer[] newOrderNumber;
-        if (orderNumbers.isEmpty()) {
-            newOrderNumber = new Integer[1];
-            newOrderNumber[0] = (int) (Math.random() * 1000) + 1;
-        } else {
-            newOrderNumber = new Integer[orderNumbers.size()];
-            orderNumbers.keySet().toArray(newOrderNumber);
-        }
-        return newOrderNumber[newOrderNumber.length - 1] + 1;
-    }
-
-
     protected SendPhoto receiveCategoryMenu(long chatId, String pictureLinc, List<MenuCategory> menuCategories) {
         SendPhoto sendPhoto = new SendPhoto();
         sendPhoto.setChatId(chatId);
@@ -323,15 +247,6 @@ public class TelegramBotMethods {
         inlineKeyboardMarkup.setKeyboard(rowsInline);
         sendPhoto.setReplyMarkup(inlineKeyboardMarkup);
         return sendPhoto;
-    }
-
-
-    public SendDocument sendDocument(long chatId, String directoryPath) {
-        SendDocument sendDocument = new SendDocument();
-        sendDocument.setChatId(chatId);
-        sendDocument.setCaption("Ваш кассовый чек");
-        sendDocument.setDocument(new InputFile(new File(directoryPath))); // "C:\\2041024245_29.08.2023_18.50.09.pdf"
-        return sendDocument;
     }
 
 
@@ -389,20 +304,6 @@ public class TelegramBotMethods {
         inlineKeyboardMarkup.setKeyboard(rowsInline);
         sendMessage.setReplyMarkup(inlineKeyboardMarkup);
         return sendMessage;
-    }
-
-
-    // Метод возвращает true, если при добавлении продукта введённые данные валидны
-    public boolean isProductStringValid(String[] productData) {
-        if (productData.length == 7 && (productData[4].contains("http") ^ productData[4].contains("*"))) {
-            try {
-                String stringNumber = productData[5].replace("*", "") + productData[6];
-                Long parseNumber = Long.parseLong(stringNumber);
-            } catch (NumberFormatException e) {
-                return false;
-            }
-            return true;
-        } else return false;
     }
 
 
@@ -540,67 +441,25 @@ public class TelegramBotMethods {
         List<List<InlineKeyboardButton>> rowsInline = new ArrayList<>();
         List<InlineKeyboardButton> firstRowInlineButton = new ArrayList<>();
         List<InlineKeyboardButton> secondRowInlineButton = new ArrayList<>();
-        List<InlineKeyboardButton> thirdRowInlineButton = new ArrayList<>();
-        List<InlineKeyboardButton> fourthRowInlineButton = new ArrayList<>();
 
         InlineKeyboardButton productButton = new InlineKeyboardButton();
-        productButton.setText("Установить скидку на продукт");
-        productButton.setCallbackData("#userlist");
-
-        InlineKeyboardButton categoryButton = new InlineKeyboardButton();
-        categoryButton.setText("Установить скидку на категорию");
-        categoryButton.setCallbackData("#chooseinfo");
-
-        InlineKeyboardButton blockUserButton = new InlineKeyboardButton();
-        blockUserButton.setText("Установить скидку от суммы покупки");
-        blockUserButton.setCallbackData("#userstatistic");
+        productButton.setText("Установить/отменить скидку на продукт");
+        productButton.setCallbackData("#allproducts");
 
         InlineKeyboardButton observeDiscountButton = new InlineKeyboardButton();
         observeDiscountButton.setText("Посмотреть текущие скидки/акции");
-        observeDiscountButton.setCallbackData("#userstatistic");
+        observeDiscountButton.setCallbackData("#observediscount");
 
         firstRowInlineButton.add(productButton);
         rowsInline.add(firstRowInlineButton);
-        secondRowInlineButton.add(categoryButton);
+        secondRowInlineButton.add(observeDiscountButton);
         rowsInline.add(secondRowInlineButton);
-        thirdRowInlineButton.add(blockUserButton);
-        rowsInline.add(thirdRowInlineButton);
-        fourthRowInlineButton.add(observeDiscountButton);
-        rowsInline.add(fourthRowInlineButton);
 
         inlineKeyboardMarkup.setKeyboard(rowsInline);
         editMessageText.setReplyMarkup(inlineKeyboardMarkup);
         return editMessageText;
     }
 
-
-    protected SendPhoto forSaleProduct(long chatId, Optional<Product> product) {
-        String productDescription = "\n" + product.get().getProductTitle() + "\n" + product.get().getProductDescription() +
-                "\nОбъём " + product.get().getProductSize() + " ml\nЦена " + product.get().getProductPrice() + " ₽";
-        SendPhoto sendPhoto = new SendPhoto();
-        sendPhoto.setChatId(chatId);
-        sendPhoto.setCaption(productDescription);
-        sendPhoto.setPhoto(new InputFile(product.get().getProductPhotoLinc()));
-
-        InlineKeyboardMarkup inlineKeyboardMarkup = new InlineKeyboardMarkup();
-        List<InlineKeyboardButton> firstRowInlineButton = new ArrayList<>();
-        List<List<InlineKeyboardButton>> rowsInline = new ArrayList<>();
-
-        InlineKeyboardButton cancelProductButton = new InlineKeyboardButton();
-        cancelProductButton.setText("❌ Отмена");
-        cancelProductButton.setCallbackData("#cancelproduct");
-        firstRowInlineButton.add(cancelProductButton);
-
-        InlineKeyboardButton addProductButton = new InlineKeyboardButton();
-        addProductButton.setText("В корзину ✅");
-        addProductButton.setCallbackData("#addproduct" + product.get().getProductId());
-        firstRowInlineButton.add(addProductButton);
-
-        rowsInline.add(firstRowInlineButton);
-        inlineKeyboardMarkup.setKeyboard(rowsInline);
-        sendPhoto.setReplyMarkup(inlineKeyboardMarkup);
-        return sendPhoto;
-    }
 
     protected EditMessageMedia forSaleProduct(long chatId, int messageId, Optional<Product> product) {
         EditMessageMedia editMessageMedia = new EditMessageMedia();
@@ -629,102 +488,7 @@ public class TelegramBotMethods {
     }
 
 
-    // Метод создаёт меню с сиропами для кофе
-    protected EditMessageMedia receiveSyrupMenu(long chatId, int messageId, String pictureLinc, String productCategory, List<Product> syrups) {
-        EditMessageMedia editMessageMedia = new EditMessageMedia();
-        editMessageMedia.setMessageId(messageId);
-        editMessageMedia.setChatId(chatId);
-        editMessageMedia.setMedia(new InputMediaPhoto(pictureLinc));
-
-        InlineKeyboardMarkup inlineKeyboardMarkup = new InlineKeyboardMarkup();
-        List<List<InlineKeyboardButton>> rowsInline = new ArrayList<>();
-
-        for (Product syr : syrups) {
-            List<InlineKeyboardButton> rowInlineButton = new ArrayList<>();
-            InlineKeyboardButton productButton = new InlineKeyboardButton();
-            productButton.setText(syr.getProductTitle() + " " + syr.getProductPrice() + " ₽");
-            productButton.setCallbackData("#addsyrup" + syr.getProductId());
-            rowInlineButton.add(productButton);
-            rowsInline.add(rowInlineButton);
-        }
-
-        List<InlineKeyboardButton> rowInlineButton = new ArrayList<>();
-        InlineKeyboardButton button = new InlineKeyboardButton();
-        button.setText("Без сиропа");
-        button.setCallbackData("#nosyrup");
-
-        rowInlineButton.add(button);
-        rowsInline.add(rowInlineButton);
-
-        inlineKeyboardMarkup.setKeyboard(rowsInline);
-        editMessageMedia.setReplyMarkup(inlineKeyboardMarkup);
-
-        return editMessageMedia;
-    }
-
-    // Метод создаёт меню с добавками для кофе
-    protected EditMessageMedia receiveSupplementMenu(long chatId, int messageId, String pictureLinc, List<Product> supplements) {
-        EditMessageMedia editMessageMedia = new EditMessageMedia();
-        editMessageMedia.setMessageId(messageId);
-        editMessageMedia.setChatId(chatId);
-        editMessageMedia.setMedia(new InputMediaPhoto(pictureLinc));
-
-        InlineKeyboardMarkup inlineKeyboardMarkup = new InlineKeyboardMarkup();
-        List<List<InlineKeyboardButton>> rowsInline = new ArrayList<>();
-
-        for (Product sup : supplements) {
-            List<InlineKeyboardButton> rowInlineButton = new ArrayList<>();
-            InlineKeyboardButton productButton = new InlineKeyboardButton();
-            productButton.setText(sup.getProductTitle() + " " + sup.getProductPrice() + " ₽");
-            productButton.setCallbackData("#addsup" + sup.getProductId());
-            rowInlineButton.add(productButton);
-            rowsInline.add(rowInlineButton);
-        }
-
-        List<InlineKeyboardButton> rowInlineButton = new ArrayList<>();
-        InlineKeyboardButton button = new InlineKeyboardButton();
-        button.setText("Без добавок");
-        button.setCallbackData("#nosup");
-
-        rowInlineButton.add(button);
-        rowsInline.add(rowInlineButton);
-
-        inlineKeyboardMarkup.setKeyboard(rowsInline);
-        editMessageMedia.setReplyMarkup(inlineKeyboardMarkup);
-
-        return editMessageMedia;
-    }
-
-    // TODO альтернативный метод
-    protected EditMessageMedia receiveProductAssortment(long chatId, int messageId, String picturesLink, List<Product> productList) {
-        EditMessageMedia editMessageMedia = new EditMessageMedia();
-        editMessageMedia.setMessageId(messageId);
-        editMessageMedia.setChatId(chatId);
-        editMessageMedia.setMedia(new InputMediaPhoto(picturesLink));
-
-        InlineKeyboardMarkup inlineKeyboardMarkup = new InlineKeyboardMarkup();
-        List<List<InlineKeyboardButton>> rowsInline = new ArrayList<>();
-
-        for (Product product : productList) {
-            List<InlineKeyboardButton> rowInlineButton = new ArrayList<>();
-            InlineKeyboardButton button = new InlineKeyboardButton();
-            button.setText(product.getProductTitle() + "  " + product.getProductSize() + "ml  " + product.getProductPrice() + " ₽");
-            button.setCallbackData("#product" + product.getProductId());
-            rowInlineButton.add(button);
-            rowsInline.add(rowInlineButton);
-        }
-
-        List<InlineKeyboardButton> rowInlineButton = new ArrayList<>();
-        rowsInline.add(rowInlineButton);
-
-        inlineKeyboardMarkup.setKeyboard(rowsInline);
-        editMessageMedia.setReplyMarkup(inlineKeyboardMarkup);
-
-        return editMessageMedia;
-    }
-
-
-    protected SendMessage receiveGroceryBasket(String chatId, String messageText, List<Optional<Product>> productList) {
+    protected SendMessage receiveGroceryBasket(String chatId, String messageText, List<Optional<Product>> productList, Map<Integer, Integer> discount) {
         StringBuilder stringBuilder = new StringBuilder();
         stringBuilder.append(messageText);
 
@@ -734,8 +498,10 @@ public class TelegramBotMethods {
         List<InlineKeyboardButton> secondRowInlineButton = new ArrayList<>();
 
         for (Optional<Product> product : productList) {
+            String price = discount.get(product.get().getProductId()) == null ? product.get().getProductPrice() + " ₽" :
+                    receiveDiscountPrice(discount, product.get().getProductId(), Integer.parseInt(product.get().getProductPrice())) + " ₽ \uD83D\uDD25%";
             String productSize = product.get().getProductSize().equals("*") ? " " : product.get().getProductSize() + " ml  ";
-            stringBuilder.append("\n\n✔️  ").append(product.get().getProductTitle()).append("  ").append(productSize).append(product.get().getProductPrice()).append(" ₽");
+            stringBuilder.append("\n\n✔️  ").append(product.get().getProductTitle()).append("  ").append(productSize).append(price);
         }
 
         InlineKeyboardButton clearButton = new InlineKeyboardButton();
@@ -760,7 +526,6 @@ public class TelegramBotMethods {
     }
 
 
-     // TODO альтернативный метод
     protected EditMessageMedia receiveProductAssortmentDistinct(long chatId, int messageId, String picturesLink, List<Product> productList) {
         EditMessageMedia editMessageMedia = new EditMessageMedia();
         editMessageMedia.setMessageId(messageId);
@@ -788,8 +553,8 @@ public class TelegramBotMethods {
         return editMessageMedia;
     }
 
-    // TODO альтернативный метод
-    protected EditMessageMedia receiveProductSameTitle(long chatId, int messageId, String picturesLink, List<Product> productList) {
+
+    protected EditMessageMedia receiveProductSameTitle(long chatId, int messageId, String picturesLink, List<Product> productList, Map<Integer, Integer> discount) {
         EditMessageMedia editMessageMedia = new EditMessageMedia();
         editMessageMedia.setMessageId(messageId);
         editMessageMedia.setChatId(chatId);
@@ -801,7 +566,9 @@ public class TelegramBotMethods {
         for (Product product : productList) {
             List<InlineKeyboardButton> rowInlineButton = new ArrayList<>();
             InlineKeyboardButton button = new InlineKeyboardButton();
-            button.setText(product.getProductTitle() + "   " + product.getProductSize() + "ml  " + product.getProductPrice() + " ₽");
+            String buttonText = discount.get(product.getProductId()) == null ? product.getProductTitle() + "   " + product.getProductSize() + "ml  " + product.getProductPrice() + " ₽" :
+                    product.getProductTitle() + "   " + product.getProductSize() + "ml  " + product.getProductPrice() + " ₽" + "  \uD83D\uDD25 -" + discount.get(product.getProductId()) + "%";
+            button.setText(buttonText);
             button.setCallbackData("#product" + product.getProductId());
             rowInlineButton.add(button);
             rowsInline.add(rowInlineButton);
@@ -821,7 +588,7 @@ public class TelegramBotMethods {
         String messageText;
         SendMessage sendMessage;
 
-        if(dataText.equals(" # заказ передан покупателю")){
+        if (dataText.equals(" # заказ передан покупателю")) {
             messageText = orderNumber + dataText;
             sendMessage = new SendMessage(stringChatId, messageText);
         } else {
@@ -846,18 +613,208 @@ public class TelegramBotMethods {
     }
 
 
+    // Метод создаёт меню с ассортиментом сиропов и простым текстовым сообщением
+    protected SendMessage receiveSyrupMenu(long chatId, String messageText, List<Product> syrups) {
+        SendMessage sendMessage = new SendMessage();
+        sendMessage.setChatId(chatId);
+        sendMessage.setText(messageText);
+
+        InlineKeyboardMarkup inlineKeyboardMarkup = new InlineKeyboardMarkup();
+        List<List<InlineKeyboardButton>> rowsInline = new ArrayList<>();
+
+        for (Product syr : syrups) {
+            List<InlineKeyboardButton> rowInlineButton = new ArrayList<>();
+            InlineKeyboardButton productButton = new InlineKeyboardButton();
+            productButton.setText(syr.getProductTitle() + " " + syr.getProductPrice() + " ₽");
+            productButton.setCallbackData("#addsyrup" + syr.getProductId());
+            rowInlineButton.add(productButton);
+            rowsInline.add(rowInlineButton);
+        }
+
+        List<InlineKeyboardButton> rowInlineButton = new ArrayList<>();
+        InlineKeyboardButton button = new InlineKeyboardButton();
+        button.setText("Без сиропа");
+        button.setCallbackData("#nosyrup");
+
+        rowInlineButton.add(button);
+        rowsInline.add(rowInlineButton);
+
+        inlineKeyboardMarkup.setKeyboard(rowsInline);
+        sendMessage.setReplyMarkup(inlineKeyboardMarkup);
+
+        return sendMessage;
+    }
+
+
+    // Метод создаёт меню с добавками для кофе и простым текстовым сообщением
+    protected EditMessageText receiveSupplementMenu(long chatId, int messageId, String messageText, List<Product> supplements) {
+        EditMessageText editMessageText = receiveEditMessageText(chatId, messageId, messageText);
+
+        InlineKeyboardMarkup inlineKeyboardMarkup = new InlineKeyboardMarkup();
+        List<List<InlineKeyboardButton>> rowsInline = new ArrayList<>();
+
+        for (Product sup : supplements) {
+            List<InlineKeyboardButton> rowInlineButton = new ArrayList<>();
+            InlineKeyboardButton productButton = new InlineKeyboardButton();
+            productButton.setText(sup.getProductTitle() + " " + sup.getProductPrice() + " ₽");
+            productButton.setCallbackData("#addsup" + sup.getProductId());
+            rowInlineButton.add(productButton);
+            rowsInline.add(rowInlineButton);
+        }
+
+        List<InlineKeyboardButton> rowInlineButton = new ArrayList<>();
+        InlineKeyboardButton button = new InlineKeyboardButton();
+        button.setText("Без добавок");
+        button.setCallbackData("#nosup");
+
+        rowInlineButton.add(button);
+        rowsInline.add(rowInlineButton);
+
+        inlineKeyboardMarkup.setKeyboard(rowsInline);
+        editMessageText.setReplyMarkup(inlineKeyboardMarkup);
+
+        return editMessageText;
+    }
+
+
+    // Метод создаёт меню с полным ассортиментом продуктов
+    protected EditMessageText receiveAllProductMenu(long chatId, int messageId, String messageText, List<Product> products, Map<Integer, Integer> discount) {
+        EditMessageText editMessageText = receiveEditMessageText(chatId, messageId, messageText);
+
+        InlineKeyboardMarkup inlineKeyboardMarkup = new InlineKeyboardMarkup();
+        List<List<InlineKeyboardButton>> rowsInline = new ArrayList<>();
+
+        for (Product product : products) {
+            List<InlineKeyboardButton> rowInlineButton = new ArrayList<>();
+            InlineKeyboardButton productButton = new InlineKeyboardButton();
+            String buttonText = discount.get(product.getProductId()) == null ? product.getProductTitle() + " " + product.getProductSize() +
+                    " ml" : product.getProductTitle() + " " + product.getProductSize() + " ml  \uD83D\uDD25 -" + discount.get(product.getProductId()) + "%";
+            productButton.setText(buttonText);
+            productButton.setCallbackData("#prodfordiscount" + product.getProductId());
+            rowInlineButton.add(productButton);
+            rowsInline.add(rowInlineButton);
+        }
+
+        List<InlineKeyboardButton> rowInlineButton = new ArrayList<>();
+        InlineKeyboardButton cancelButton = new InlineKeyboardButton();
+        cancelButton.setText("❌  Отмена");
+        cancelButton.setCallbackData("#cancelmessage");
+
+        rowInlineButton.add(cancelButton);
+        rowsInline.add(rowInlineButton);
+
+        inlineKeyboardMarkup.setKeyboard(rowsInline);
+        editMessageText.setReplyMarkup(inlineKeyboardMarkup);
+
+        return editMessageText;
+    }
+
+
+    // Метод меню добавления/удаления скидки на продукт
+    public EditMessageText receiveProductForDiscount(long chatId, int messageId, String messageText, int productId) {
+        EditMessageText editMessageText = receiveEditMessageText(chatId, messageId, messageText);
+        InlineKeyboardMarkup inlineKeyboardMarkup = new InlineKeyboardMarkup();
+        List<List<InlineKeyboardButton>> rowsInline = new ArrayList<>();
+        List<InlineKeyboardButton> firstRowInlineButton = new ArrayList<>();
+        List<InlineKeyboardButton> secondRowInlineButton = new ArrayList<>();
+
+        InlineKeyboardButton addDiscountButton = new InlineKeyboardButton();
+        addDiscountButton.setText("Установить скидку");
+        addDiscountButton.setCallbackData("#setdiscount" + productId);
+
+        InlineKeyboardButton deleteDiscountButton = new InlineKeyboardButton();
+        deleteDiscountButton.setText("Убрать скидку");
+        deleteDiscountButton.setCallbackData("#deldiscount" + productId);
+
+        InlineKeyboardButton cancelButton = new InlineKeyboardButton();
+        cancelButton.setText("❌  Отмена");
+        cancelButton.setCallbackData("#cancelmessage");
+
+
+        firstRowInlineButton.add(addDiscountButton);
+        firstRowInlineButton.add(deleteDiscountButton);
+        rowsInline.add(firstRowInlineButton);
+        secondRowInlineButton.add(cancelButton);
+        rowsInline.add(secondRowInlineButton);
+
+        inlineKeyboardMarkup.setKeyboard(rowsInline);
+        editMessageText.setReplyMarkup(inlineKeyboardMarkup);
+        return editMessageText;
+    }
+
+
+    // Метод возвращает true, если при добавлении продукта введённые данные валидны
+    public boolean isProductStringValid(String[] productData) {
+        if (productData.length == 7 && (productData[4].contains("http") ^ productData[4].contains("*"))) {
+            try {
+                String stringNumber = productData[5].replace("*", "") + productData[6];
+                Long parseNumber = Long.parseLong(stringNumber);
+            } catch (NumberFormatException e) {
+                return false;
+            }
+            return true;
+        } else return false;
+    }
+
+
+    protected int createOrderNumber(LinkedHashMap<Integer, String> orderNumbers) {
+        Integer[] newOrderNumber;
+        if (orderNumbers.isEmpty()) {
+            newOrderNumber = new Integer[1];
+            newOrderNumber[0] = (int) (Math.random() * 1000) + 1;
+        } else {
+            newOrderNumber = new Integer[orderNumbers.size()];
+            orderNumbers.keySet().toArray(newOrderNumber);
+        }
+        return newOrderNumber[newOrderNumber.length - 1] + 1;
+    }
+
+
+    // Отправка сообщения
+    protected SendMessage receiveCreatedSendMessage(long chatId, String text) {
+        SendMessage sendMessage = new SendMessage();
+        sendMessage.setChatId(chatId);
+        sendMessage.setText(text);
+        return sendMessage;
+    }
+
+
+    protected EditMessageText receiveEditMessageText(long chatId, int messageId, String messageText) {
+        EditMessageText editMessageText = new EditMessageText();
+        editMessageText.setChatId(chatId);
+        editMessageText.setMessageId(messageId);
+        editMessageText.setText(messageText);
+        return editMessageText;
+    }
+
+
+    protected DeleteMessage deleteMessage(long chatId, int messageId) {
+        DeleteMessage deleteMessage = new DeleteMessage();
+        deleteMessage.setMessageId(messageId);
+        deleteMessage.setChatId(chatId);
+        return deleteMessage;
+    }
+
+
+    public SendDocument sendDocument(long chatId, String directoryPath) {
+        SendDocument sendDocument = new SendDocument();
+        sendDocument.setChatId(chatId);
+        sendDocument.setCaption("Ваш кассовый чек");
+        sendDocument.setDocument(new InputFile(new File(directoryPath))); // "C:\\2041024245_29.08.2023_18.50.09.pdf"
+        return sendDocument;
+    }
+
+
+    public int receiveDiscountPrice(Map<Integer, Integer> discount, int productId, int price) {
+        int upPrice = price * 100;
+        int upDiscount = discount.get(productId) == null ? 0 : discount.get(productId) * price;
+        return (upPrice - upDiscount) / 100;
+    }
+
 ////////////////////////////////////////////////// TEST ///////////////////////////////////////////////////////////////
-
-
-
-
-
-
-
-
-
 
 
 }
 
 // 639002000000000003   1111 1111 1111 1026
+
