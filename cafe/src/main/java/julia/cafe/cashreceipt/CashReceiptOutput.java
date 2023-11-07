@@ -1,4 +1,4 @@
-package julia.cafe.model;
+package julia.cafe.cashreceipt;
 import org.apache.pdfbox.pdmodel.PDDocument;
 import org.apache.pdfbox.pdmodel.PDPage;
 import org.apache.pdfbox.pdmodel.PDPageContentStream;
@@ -45,12 +45,12 @@ public class CashReceiptOutput {
             stream.setNonStrokingColor(Color.BLUE);
             int marginTop = 760;
             int marginLeft = 30;
-            for (int i = 0; i < splitCashReceiptData.length; i++) {
+            for (String splitCashReceiptDatum : splitCashReceiptData) {
                 marginTop -= 15;
                 stream.beginText();
                 stream.setFont(font, 10);
                 stream.newLineAtOffset(marginLeft, marginTop);
-                stream.showText(splitCashReceiptData[i]);
+                stream.showText(splitCashReceiptDatum);
                 stream.endText();
             }
             stream.close();

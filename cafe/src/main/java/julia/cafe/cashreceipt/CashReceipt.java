@@ -1,4 +1,4 @@
-package julia.cafe.model;
+package julia.cafe.cashreceipt;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 

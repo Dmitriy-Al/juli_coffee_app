@@ -2,7 +2,6 @@ package julia.cafe.service;
 
 import julia.cafe.model.MenuCategory;
 import julia.cafe.model.Product;
-import julia.cafe.model.ProductComparator;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
 import org.telegram.telegrambots.meta.api.methods.invoices.CreateInvoiceLink;
@@ -30,15 +29,11 @@ import java.util.List;
 import julia.cafe.model.User;
 
 import java.sql.Timestamp;
-import java.time.LocalDate;
 import java.util.*;
 
 @Slf4j
 @Component
 public class TelegramBotMethods {
-
-    private ProductComparator productComparator = new ProductComparator();
-    // private MenuCategoryComparator menuCategoryComparator = new MenuCategoryComparator();
 
 
     protected void setAdminKeyBoard(SendMessage sendMessage) { // TODO setKeyBoardAdd(SendMessage sendMessage)
@@ -111,8 +106,6 @@ public class TelegramBotMethods {
         replyKeyboardMarkup.setKeyboard(keyboardRows);
         sendMessage.setReplyMarkup(replyKeyboardMarkup);
     }
-
-
 
 
     protected CreateInvoiceLink payOrder(long chatId, int messageId, String photoUrl, String providerToken, List<LabeledPrice> labeledPriceList) {
@@ -250,7 +243,7 @@ public class TelegramBotMethods {
     }
 
 
-    public SendMessage receiveRegisterAndSettingsMenu(String chatId, String text, boolean isAgree) {
+    public SendMessage receiveSettingsMenu(String chatId, boolean isAgree, String text) {
         SendMessage sendMessage = new SendMessage(chatId, text);
         InlineKeyboardMarkup inlineKeyboardMarkup = new InlineKeyboardMarkup();
         List<List<InlineKeyboardButton>> rowsInline = new ArrayList<>(); // коллекция коллекций с горизонтальным рядом кнопок, создаёт вертикальный ряд кнопок
@@ -383,25 +376,14 @@ public class TelegramBotMethods {
     // Метод создаёт редактированное сообщение с текстом, содержащем статистическую информацию
     public EditMessageText receiveStatistic(long chatId, int messageId, List<User> users) {
         Collections.sort(users);
-        DateTimeFormatter dateTimeFormatter = DateTimeFormatter.ofPattern("yyyy");
-        int currentYear = Integer.parseInt(dateTimeFormatter.format(LocalDate.now()));
-
         Timestamp lastUserRegisteredDate = users.get(users.size() - 1).getRegisteredDate();
-        int usersAge = 0;
-        int countBirthYear = 0;
+        char pointer = 10033;
         int cashReceiptCount = 0;
         long amountPurchase = 0;
         long maxPurchase = 0;
-        char pointer = 10033;
 
         for (int i = 0; i < users.size(); i++) {
-            if (users.get(i).getBirthday() != null) {
-                String[] birth = users.get(i).getBirthday().split("-");
-                int age = currentYear - Integer.parseInt(birth[0]);
-                usersAge += age;
-                countBirthYear++;
-            }
-            if (users.get(i).getPurchase() != null) {
+            if (!users.get(i).getPurchase().equals("no purchase")) {
                 String[] data = users.get(i).getPurchase().split("purchase");
                 cashReceiptCount += data.length;
                 for (int y = 0; y < data.length; y++) {
@@ -415,11 +397,11 @@ public class TelegramBotMethods {
             }
         }
 
-        String stringBuffer = "Общая статистика:" +
+        long midCashReceipt = cashReceiptCount == 0 ? 0 : amountPurchase / cashReceiptCount;
+
+        String text = "Общая статистика:" +
                 "\n\n" + pointer + " Всего пользователей:  " +
                 users.size() +
-                "\n\n" + pointer + " Средний возраст зарегистрированных пользователей, лет:  " +
-                usersAge / countBirthYear +
                 "\n\n" + pointer + " Последний на текущий момент пользователь зарегистрирован, дата:  " +
                 lastUserRegisteredDate +
                 "\n\n" + pointer + " Количество покупок за всё время =  " +
@@ -427,11 +409,11 @@ public class TelegramBotMethods {
                 "\n\n" + pointer + " Всего совершено покупок на сумму р. =  " +
                 amountPurchase +
                 "\n\n" + pointer + " Средняя цена чека р. =  " +
-                amountPurchase / cashReceiptCount +
+                midCashReceipt +
                 "\n\n" + pointer + " Максимальная сумма чека р. =  " +
                 maxPurchase;
 
-        return receiveEditMessageText(chatId, messageId, stringBuffer);
+        return receiveEditMessageText(chatId, messageId, text);
     }
 
 
@@ -584,13 +566,13 @@ public class TelegramBotMethods {
     }
 
 
-    protected SendMessage receiveOrderMessage(String stringChatId, int orderNumber, String dataText) {
+    protected SendMessage receiveOrderMessage(long chatId, int orderNumber, String dataText) {
         String messageText;
-        SendMessage sendMessage;
-
+        SendMessage sendMessage = new SendMessage();
+        sendMessage.setChatId(chatId);
         if (dataText.equals(" # заказ передан покупателю")) {
             messageText = orderNumber + dataText;
-            sendMessage = new SendMessage(stringChatId, messageText);
+            sendMessage.setText(messageText);
         } else {
             InlineKeyboardMarkup inlineKeyboardMarkup = new InlineKeyboardMarkup();
             messageText = "Заказ " + orderNumber + "\n" + dataText.replaceAll("#", "\n").replaceAll("\\*ml", " ");
@@ -605,7 +587,7 @@ public class TelegramBotMethods {
             rowsInline.add(rowInlineButton);
             inlineKeyboardMarkup.setKeyboard(rowsInline);
 
-            sendMessage = new SendMessage(stringChatId, messageText);
+            sendMessage.setText(messageText);
             sendMessage.setReplyMarkup(inlineKeyboardMarkup);
         }
 

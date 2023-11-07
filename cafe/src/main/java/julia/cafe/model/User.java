@@ -2,22 +2,21 @@ package julia.cafe.model;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.Id;
+import lombok.extern.slf4j.Slf4j;
 
 import java.sql.Timestamp;
+import java.util.Objects;
 
+@Slf4j
 @lombok.Setter
 @lombok.Getter
 @Entity(name = "userTable")
-public class User implements Cloneable, Comparable<User> { //
-
+public class User implements Cloneable, Comparable<User> {
 
     @Id
     private long chatId;
     private String firstname;
-    private String lastname;
-    private String patronymic;
     private String userName;
-    private String birthday;
     private Timestamp registeredDate;
     private boolean agreeGetMessage;
     @Column(columnDefinition = "varchar(10000000)")
@@ -25,35 +24,31 @@ public class User implements Cloneable, Comparable<User> { //
 
     public User(){};
 
-    public User(long chatId, String userName, boolean agreeGetMessage, String firstname, String lastname, String patronymic, String birthday, Timestamp registeredDate, String purchase){
+    public User(long chatId, String userName, boolean agreeGetMessage, Timestamp registeredDate, String firstname, String purchase){
         this.chatId = chatId;
         this.firstname = firstname;
-        this.lastname = lastname;
-        this.patronymic = patronymic;
         this.userName = userName;
-        this.birthday = birthday;
         this.registeredDate = registeredDate;
         this.agreeGetMessage = agreeGetMessage;
         this.purchase = purchase;
     }
+
 
     @Override
     public Object clone() {
         try {
             return super.clone();
         } catch (CloneNotSupportedException e) {
-            // TODO
+            log.error("InvoiceLinc execute exc: " + e.getMessage());
         }
         return null;
     }
 
 
-    @Override
-    public String toString() {
-        char pointer = 10033;
-        return pointer + " userName: "+ userName + "\nимя: " + firstname + "\nдата рождения: " + birthday +
-                "\nдата регистрации : " + registeredDate + "\nid: " + chatId + "\nпокупки: " + purchase.replaceAll("purchase", "\n") + "\n";
+    public int hashCode(){
+        return Objects.hash(chatId, firstname, userName, registeredDate, agreeGetMessage, purchase);
     }
+
 
     @Override
     public int compareTo(User user){
@@ -65,14 +60,17 @@ public class User implements Cloneable, Comparable<User> { //
         return 0;
     }
 
-    public String[] getUserData() {
-        String[] data = new String[5];
-        data[0] = userName;
-        data[1] = firstname;
-        data[2] = birthday;
-        data[3] = registeredDate.toString();
-        data[4] = purchase;
-        return data;
+
+    @Override
+    public String toString() {
+        char pointer = 10033;
+        return pointer + " userName: "+ userName + "\nимя: " + firstname + "\nдата регистрации : " + registeredDate +
+                "\nid: " + chatId + "\nпокупки: " + purchase.replaceAll("purchase", "\n") + "\n";
+    }
+
+
+    public String getUserData() {
+        return " @username: "+ userName + "\nимя: " + firstname + "\nдата регистрации : " + registeredDate + "\nid: " + chatId;
     }
 
 }
