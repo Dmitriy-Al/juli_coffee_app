@@ -7,12 +7,13 @@ import jakarta.persistence.Id;
 import lombok.extern.slf4j.Slf4j;
 
 import java.util.Arrays;
+import java.util.Objects;
 
 @Slf4j
 @lombok.Setter
 @lombok.Getter
-@Entity(name = "productTable")
-public class Product implements Comparable<Product> {
+@Entity(name = "product_table")
+public class Product implements Comparable<Product>, Cloneable {
 
     @Id
     @GeneratedValue(strategy = GenerationType.AUTO)
@@ -24,8 +25,19 @@ public class Product implements Comparable<Product> {
     private String productPhotoLinc;
     private String productSize;
     private String productPrice;
+    private int productDiscount;
 
 
+    public int hashCode(){
+        return Objects.hash(
+                productId,
+                menuCategory,
+                productCategory,
+                productTitle,
+                productSize,
+                productPrice
+                );
+    }
 
 
     @Override
@@ -33,29 +45,17 @@ public class Product implements Comparable<Product> {
         return obj instanceof Product && this.productTitle.equals(((Product) obj).productTitle);
     }
 
-/*
 
     @Override
-    public int compareTo(Product product) {
-        if (this.getProductCategory().length() < product.getProductCategory().length()) {
-            return 1;
-        } else if (this.getProductCategory().length() > product.getProductCategory().length()) {
-            return -1;
+    public Object clone() {
+        try {
+            return super.clone();
+        } catch (CloneNotSupportedException e) {
+            log.error("Product clone exc: " + e.getMessage());
         }
-        return this.getMenuCategory().length() - product.getMenuCategory().length();
+        return null;
     }
 
-
-    @Override
-    public int compareTo(Product product) {
-       char[] a = this.getProductCategory().toCharArray();
-        char[] b = product.getProductCategory().toCharArray();
-       return Arrays.hashCode(a) - Arrays.hashCode(b);
-
-    }
-
-
- */
 
     @Override
     public int compareTo(Product product) {
@@ -63,8 +63,6 @@ public class Product implements Comparable<Product> {
         char[] b = product.getProductCategory().toCharArray();
         return Arrays.hashCode(a) - Arrays.hashCode(b);
     }
-
-
 
 
 }

@@ -10,7 +10,7 @@ import java.util.Objects;
 @Slf4j
 @lombok.Setter
 @lombok.Getter
-@Entity(name = "userTable")
+@Entity(name = "user_table")
 public class User implements Cloneable, Comparable<User> {
 
     @Id
@@ -39,7 +39,7 @@ public class User implements Cloneable, Comparable<User> {
         try {
             return super.clone();
         } catch (CloneNotSupportedException e) {
-            log.error("InvoiceLinc execute exc: " + e.getMessage());
+            log.error("User clone exc: " + e.getMessage());
         }
         return null;
     }
@@ -70,7 +70,7 @@ public class User implements Cloneable, Comparable<User> {
 
 
     public String getUserData() {
-        return " @username: "+ userName + "\nимя: " + firstname + "\nдата регистрации : " + registeredDate + "\nid: " + chatId;
+        return " @username: "+ userName + "\nимя: " + firstname + "\nпервое посещение : " + registeredDate + "\nid: " + chatId;
     }
 
 }

@@ -2,6 +2,7 @@ package julia.cafe.service;
 // 639002000000000003   1111 1111 1111 1026
 
 import julia.cafe.cashreceipt.CashReceipt;
+import julia.cafe.cashreceipt.CashReceiptBuilder;
 import julia.cafe.cashreceipt.CashReceiptOutput;
 import julia.cafe.config.Config;
 import julia.cafe.model.*;
@@ -39,12 +40,12 @@ public class TelegramBotCommand extends TelegramLongPollingBot {
 
     private final LinkedHashMap<Integer, String> ORDER_NUMBER = new LinkedHashMap<>();
     private final Map<Long, List<Optional<Product>>> GROCERY_BASKET = new HashMap<>();
-    private final Map<Integer, Integer> DISCOUNT = new HashMap<>();
     private final Map<Long, String> TEMP_DATA = new HashMap<>();
 
     private final TelegramBotMethods method = new TelegramBotMethods();
     private final Config config;
 
+    private final static String PHOTO_URL = "https://lookaside.fbsbx.com/lookaside/crawler/media/?media_id=101383654886643";
     private final static String DEFAULT_MAIN_PICTURE_LINK = "https://disk.yandex.ru/i/1QoAtJVbb3U8TA";
     private final static String UNREGISTERED_USER = "Unregistered";
     private final static String DEFAULT_NAME = "незарегистрированный пользователь";
@@ -52,7 +53,7 @@ public class TelegramBotCommand extends TelegramLongPollingBot {
 
     private String mainPictureLink = null;
     private LocalTime tempTime = null;
-
+    private int cashReceiptNumber = 0;
 
     @Autowired
     public UserRepository userRepository;
@@ -84,11 +85,11 @@ public class TelegramBotCommand extends TelegramLongPollingBot {
                     sendMessage.setChatId(chatId);
                     sendMessage.setText(userName + ApplicationStrings.GREETiNG_FOR_USER_TEXT);
                     method.setCommonKeyBoard(sendMessage, GROCERY_BASKET.get(chatId));
-                } else if (user.get().getFirstname().equals(config.ADMIN)) {
+                } else if (user.get().getFirstname().equals(config.admin)) {
                     sendMessage.setChatId(chatId);
                     sendMessage.setText("Здравствуйте, " + userName + "!");
                     method.setAdminKeyBoard(sendMessage);
-                } else if (user.get().getFirstname().equals(config.BARISTA)) {
+                } else if (user.get().getFirstname().equals(config.barista)) {
                     sendMessage.setChatId(chatId);
                     sendMessage.setText("Здравствуйте, " + user.get().getFirstname() + "!");
                     method.setBaristaKeyBoard(sendMessage);
@@ -136,20 +137,20 @@ public class TelegramBotCommand extends TelegramLongPollingBot {
                     Optional<User> user = userRepository.findById(chatId);
                     String firstName = user.map(user2 -> user2.getFirstname().equals(DEFAULT_NAME) ? "" : user2.getFirstname() + ", ").orElse("");
                     executeSendMessage(method.receiveGroceryBasket(String.valueOf(chatId), "\uD83D\uDED2 " + firstName +
-                            "ваша корзина:", GROCERY_BASKET.get(chatId), DISCOUNT));
+                            "ваша корзина:", GROCERY_BASKET.get(chatId)));
                 }
 
             } else if (messageText.equals("Добавить новый продукт")) {
                 Optional<User> user = userRepository.findById(chatId);
                 SendMessage sendMessage;
                 if (user.isEmpty() || user.get().getFirstname().equals(DEFAULT_NAME)) {
-                    sendMessage = new SendMessage(stringChatId, ApplicationStrings.COMMAND_NOT_EXISTS_TEXT);
+                    sendMessage = new SendMessage(stringChatId, ApplicationStrings.COMMAND_DNOT_EXISTS_TEXT);
                     method.setCommonKeyBoard(sendMessage, GROCERY_BASKET.get(chatId));
                     executeSendMessage(sendMessage);
-                } else if (user.get().getFirstname().equals(config.ADMIN)) {
+                } else if (user.get().getFirstname().equals(config.admin)) {
                     TEMP_DATA.put(chatId, "#ADD_NEW_PRODUCT");
                 } else {
-                    sendMessage = new SendMessage(stringChatId, ApplicationStrings.COMMAND_NOT_EXISTS_TEXT);
+                    sendMessage = new SendMessage(stringChatId, ApplicationStrings.COMMAND_DNOT_EXISTS_TEXT);
                     executeSendMessage(sendMessage);
                 }
 
@@ -160,10 +161,10 @@ public class TelegramBotCommand extends TelegramLongPollingBot {
                     sendMessage = new SendMessage(stringChatId, "Такая команда отсутствует");
                     method.setCommonKeyBoard(sendMessage, GROCERY_BASKET.get(chatId));
                     executeSendMessage(sendMessage);
-                } else if (user.get().getFirstname().equals(config.ADMIN)) {
+                } else if (user.get().getFirstname().equals(config.admin)) {
                     TEMP_DATA.put(chatId, "#ADD_NEW_MENU_CATEGORY");
                 } else {
-                    sendMessage = new SendMessage(stringChatId, ApplicationStrings.COMMAND_NOT_EXISTS_TEXT);
+                    sendMessage = new SendMessage(stringChatId, ApplicationStrings.COMMAND_DNOT_EXISTS_TEXT);
                     executeSendMessage(sendMessage);
                 }
 
@@ -171,13 +172,13 @@ public class TelegramBotCommand extends TelegramLongPollingBot {
                 Optional<User> user = userRepository.findById(chatId);
                 SendMessage sendMessage;
                 if (user.isEmpty() || user.get().getFirstname().equals(DEFAULT_NAME)) {
-                    sendMessage = new SendMessage(stringChatId, ApplicationStrings.COMMAND_NOT_EXISTS_TEXT);
+                    sendMessage = new SendMessage(stringChatId, ApplicationStrings.COMMAND_DNOT_EXISTS_TEXT);
                     method.setCommonKeyBoard(sendMessage, GROCERY_BASKET.get(chatId));
                     executeSendMessage(sendMessage);
-                } else if (user.get().getFirstname().equals(config.ADMIN)) {
+                } else if (user.get().getFirstname().equals(config.admin)) {
                     TEMP_DATA.put(chatId, "#WRITE_MESSAGE_FOR_USERS");
                 } else {
-                    sendMessage = new SendMessage(stringChatId, ApplicationStrings.COMMAND_NOT_EXISTS_TEXT);
+                    sendMessage = new SendMessage(stringChatId, ApplicationStrings.COMMAND_DNOT_EXISTS_TEXT);
                     executeSendMessage(sendMessage);
                 }
 
@@ -185,13 +186,13 @@ public class TelegramBotCommand extends TelegramLongPollingBot {
                 Optional<User> user = userRepository.findById(chatId);
                 SendMessage sendMessage;
                 if (user.isEmpty() || user.get().getFirstname().equals(DEFAULT_NAME)) {
-                    sendMessage = new SendMessage(stringChatId, ApplicationStrings.COMMAND_NOT_EXISTS_TEXT);
+                    sendMessage = new SendMessage(stringChatId, ApplicationStrings.COMMAND_DNOT_EXISTS_TEXT);
                     method.setCommonKeyBoard(sendMessage, GROCERY_BASKET.get(chatId));
                     executeSendMessage(sendMessage);
-                } else if (user.get().getFirstname().equals(config.ADMIN)) {
+                } else if (user.get().getFirstname().equals(config.admin)) {
                     executeSendMessage(method.receivePromoAnalyticMenu(stringChatId, "Промо и аналитика"));
                 } else {
-                    sendMessage = new SendMessage(stringChatId, ApplicationStrings.COMMAND_NOT_EXISTS_TEXT);
+                    sendMessage = new SendMessage(stringChatId, ApplicationStrings.COMMAND_DNOT_EXISTS_TEXT);
                     executeSendMessage(sendMessage);
                 }
 
@@ -199,13 +200,13 @@ public class TelegramBotCommand extends TelegramLongPollingBot {
                 Optional<User> user = userRepository.findById(chatId);
                 SendMessage sendMessage;
                 if (user.isEmpty() || user.get().getFirstname().equals(DEFAULT_NAME)) {
-                    sendMessage = new SendMessage(stringChatId, ApplicationStrings.COMMAND_NOT_EXISTS_TEXT);
+                    sendMessage = new SendMessage(stringChatId, ApplicationStrings.COMMAND_DNOT_EXISTS_TEXT);
                     method.setCommonKeyBoard(sendMessage, GROCERY_BASKET.get(chatId));
                     executeSendMessage(sendMessage);
-                } else if (user.get().getFirstname().equals(config.ADMIN)) {
+                } else if (user.get().getFirstname().equals(config.admin)) {
                     executeSendMessage(method.receiveMenuForDelete(stringChatId, "В этом разделе вы можете:"));
                 } else {
-                    sendMessage = new SendMessage(stringChatId, ApplicationStrings.COMMAND_NOT_EXISTS_TEXT);
+                    sendMessage = new SendMessage(stringChatId, ApplicationStrings.COMMAND_DNOT_EXISTS_TEXT);
                     executeSendMessage(sendMessage);
                 }
 
@@ -213,10 +214,10 @@ public class TelegramBotCommand extends TelegramLongPollingBot {
                 Optional<User> user = userRepository.findById(chatId);
                 SendMessage sendMessage;
                 if (user.isEmpty() || user.get().getFirstname().equals(DEFAULT_NAME)) {
-                    sendMessage = new SendMessage(stringChatId, ApplicationStrings.COMMAND_NOT_EXISTS_TEXT);
+                    sendMessage = new SendMessage(stringChatId, ApplicationStrings.COMMAND_DNOT_EXISTS_TEXT);
                     method.setCommonKeyBoard(sendMessage, GROCERY_BASKET.get(chatId));
                     executeSendMessage(sendMessage);
-                } else if (user.get().getFirstname().equals(config.BARISTA)) {
+                } else if (user.get().getFirstname().equals(config.barista)) {
                     if (ORDER_NUMBER.isEmpty()) {
                         sendMessage = new SendMessage(stringChatId, "Заказов пока нет");
                         executeSendMessage(sendMessage);
@@ -224,7 +225,7 @@ public class TelegramBotCommand extends TelegramLongPollingBot {
                         ORDER_NUMBER.forEach((key, value) -> executeSendMessage(method.receiveOrderMessage(chatId, key, value)));
                     }
                 } else {
-                    sendMessage = new SendMessage(stringChatId, ApplicationStrings.COMMAND_NOT_EXISTS_TEXT);
+                    sendMessage = new SendMessage(stringChatId, ApplicationStrings.COMMAND_DNOT_EXISTS_TEXT);
                     executeSendMessage(sendMessage);
                 }
 
@@ -232,14 +233,14 @@ public class TelegramBotCommand extends TelegramLongPollingBot {
                 Optional<User> user = userRepository.findById(chatId);
                 SendMessage sendMessage;
                 if (user.isEmpty() || user.get().getFirstname().equals(DEFAULT_NAME)) {
-                    sendMessage = new SendMessage(stringChatId, ApplicationStrings.COMMAND_NOT_EXISTS_TEXT);
+                    sendMessage = new SendMessage(stringChatId, ApplicationStrings.COMMAND_DNOT_EXISTS_TEXT);
                     method.setCommonKeyBoard(sendMessage, GROCERY_BASKET.get(chatId));
                     executeSendMessage(sendMessage);
-                } else if (user.get().getFirstname().equals(config.BARISTA)) {
+                } else if (user.get().getFirstname().equals(config.barista)) {
                     tempTime = LocalTime.now();
-                    executeSendMessage(method.receiveCreatedSendMessage(chatId, ApplicationStrings.ORDER_TIME_TEXT));
+                    executeSendMessage(new SendMessage(stringChatId, ApplicationStrings.ORDER_TIME_TEXT));
                 } else {
-                    sendMessage = new SendMessage(stringChatId, ApplicationStrings.COMMAND_NOT_EXISTS_TEXT);
+                    sendMessage = new SendMessage(stringChatId, ApplicationStrings.COMMAND_DNOT_EXISTS_TEXT);
                     executeSendMessage(sendMessage);
                 }
 
@@ -257,16 +258,16 @@ public class TelegramBotCommand extends TelegramLongPollingBot {
                 SendMessage sendMessage;
                 Optional<User> user = userRepository.findById(chatId);
                 if (user.isEmpty() || user.get().getFirstname().equals(DEFAULT_NAME)) {
-                    sendMessage = new SendMessage(stringChatId, ApplicationStrings.COMMAND_NOT_EXISTS_TEXT);
+                    sendMessage = new SendMessage(stringChatId, ApplicationStrings.COMMAND_DNOT_EXISTS_TEXT);
                     method.setCommonKeyBoard(sendMessage, GROCERY_BASKET.get(chatId));
-                } else if (user.get().getFirstname().equals(config.ADMIN)) {
-                    sendMessage = new SendMessage(stringChatId, ApplicationStrings.COMMAND_NOT_EXISTS_TEXT);
+                } else if (user.get().getFirstname().equals(config.admin)) {
+                    sendMessage = new SendMessage(stringChatId, ApplicationStrings.COMMAND_DNOT_EXISTS_TEXT);
                     method.setAdminKeyBoard(sendMessage);
-                } else if (user.get().getFirstname().equals(config.BARISTA)) {
-                    sendMessage = new SendMessage(stringChatId, ApplicationStrings.COMMAND_NOT_EXISTS_TEXT);
+                } else if (user.get().getFirstname().equals(config.barista)) {
+                    sendMessage = new SendMessage(stringChatId, ApplicationStrings.COMMAND_DNOT_EXISTS_TEXT);
                     method.setBaristaKeyBoard(sendMessage);
                 } else {
-                    sendMessage = new SendMessage(stringChatId, ApplicationStrings.COMMAND_NOT_EXISTS_TEXT);
+                    sendMessage = new SendMessage(stringChatId, ApplicationStrings.COMMAND_DNOT_EXISTS_TEXT);
                     method.setCommonKeyBoard(sendMessage, GROCERY_BASKET.get(chatId));
                 }
                 executeSendMessage(sendMessage);
@@ -281,7 +282,7 @@ public class TelegramBotCommand extends TelegramLongPollingBot {
             } else if (TEMP_DATA.get(chatId).equals("#SET_PRODUCT_IN_DB")) {
                 TEMP_DATA.remove(chatId);
                 SendMessage sendMessage;
-                String[] productData = messageText.split("\\+");
+                String[] productData = messageText.split("#");
                 if (method.isProductStringValid(productData)) {
                     setProductInDB(productData);
                     sendMessage = new SendMessage(stringChatId, "Продукт добавлен в ассортимент");
@@ -298,9 +299,9 @@ public class TelegramBotCommand extends TelegramLongPollingBot {
             } else if (TEMP_DATA.get(chatId).equals("#SET_MENU_CATEGORY_IN_DB")) {
                 TEMP_DATA.remove(chatId);
                 SendMessage sendMessage;
-                String[] categoryData = messageText.split("\\+");
+                String[] categoryData = messageText.split("#");
                 if (categoryData.length == 2 && categoryData[1].contains("http")) {
-                    setCategoryInDB(messageText);
+                    setCategoryInDB(categoryData);
                     sendMessage = new SendMessage(stringChatId, "Категория добавлена");
                 } else {
                     sendMessage = new SendMessage(stringChatId, "Ошибка ввода данных. Категория не была добавлена в ассортимент");
@@ -337,24 +338,24 @@ public class TelegramBotCommand extends TelegramLongPollingBot {
 
             } else if (TEMP_DATA.get(chatId).equals("#REGISTER")) {
                 TEMP_DATA.remove(chatId);
-                Optional<User> admin = Optional.ofNullable(userRepository.findByFirstname(config.ADMIN));
-                Optional<User> barista = Optional.ofNullable(userRepository.findByFirstname(config.BARISTA));
-                if ((messageText.length() < 2 || messageText.length() > 15) || (messageText.equals(config.ADMIN) &&
-                        admin.isPresent()) || (messageText.equals(config.BARISTA) && barista.isPresent())) {
+                Optional<User> admin = Optional.ofNullable(userRepository.findByFirstname(config.admin));
+                Optional<User> barista = Optional.ofNullable(userRepository.findByFirstname(config.barista));
+                if ((messageText.length() < 2 || messageText.length() > 15) || (messageText.equals(config.admin) &&
+                        admin.isPresent()) || (messageText.equals(config.barista) && barista.isPresent())) {
                     SendMessage sendMessage = new SendMessage(stringChatId, "Имя не может содержать меньше 2 и больше 15 символов, или заданную последовательность символов");
                     method.setCommonKeyBoard(sendMessage, GROCERY_BASKET.get(chatId));
                     executeSendMessage(sendMessage);
                 } else {
                     Optional<User> user = userRepository.findById(chatId);
-                    User newUser = (User) user.get().clone();
+                    User newUser = user.isPresent() ? (User) user.get().clone() : new User();
                     newUser.setFirstname(messageText);
                     userRepository.save(newUser);
 
-                    if (messageText.equals(config.ADMIN)) {
+                    if (messageText.equals(config.admin)) {
                         SendMessage sendMessage = new SendMessage(stringChatId, "Ваша учётная запись зарегистрирована в качестве учётной записи администратора");
                         method.setAdminKeyBoard(sendMessage);
                         executeSendMessage(sendMessage);
-                    } else if (messageText.equals(config.BARISTA)) {
+                    } else if (messageText.equals(config.barista)) {
                         SendMessage sendMessage = new SendMessage(stringChatId, "Ваша учётная запись зарегистрирована в качестве учётной записи бариста");
                         method.setBaristaKeyBoard(sendMessage);
                         executeSendMessage(sendMessage);
@@ -384,14 +385,17 @@ public class TelegramBotCommand extends TelegramLongPollingBot {
                 int discount;
                 try {
                     discount = Integer.parseInt(messageText);
-                    DISCOUNT.put(productId, discount);
+                    Optional<Product> product = productRepository.findById(productId);
+                    Product editedProduct = (Product) product.get().clone();
+                    editedProduct.setProductDiscount(discount);
+                    productRepository.save(editedProduct);
+                   //DISCOUNT.put(productId, discount);
                     sendMessage = new SendMessage(stringChatId, "Добавлена скидка " + discount + "%");
                 } catch (NumberFormatException e) {
                     sendMessage = new SendMessage(stringChatId, "Формат ввода может быть только цифрами, скидка не добавлена");
                 }
                 method.setAdminKeyBoard(sendMessage);
                 executeSendMessage(sendMessage);
-                System.out.println("DISCOUNT.get " + DISCOUNT.get(productId));
             }
 
 
@@ -411,7 +415,6 @@ public class TelegramBotCommand extends TelegramLongPollingBot {
                 int chooseMenuCategory = Integer.parseInt(callbackData.replace("#menucategory", ""));
                 Optional<MenuCategory> menuCategory = menuCategoryRepository.findById(chooseMenuCategory); // категории меню
                 List<Product> productList = (List<Product>) productRepository.findAll(); // список продуктов
-
                 productList = productList.stream().filter(product -> menuCategory.get().getCategory().equalsIgnoreCase("весь ассортимент") ?
                         !(product.getProductCategory().equalsIgnoreCase("добавка") || product.getProductCategory().equalsIgnoreCase("сироп")) :
                         product.getMenuCategory().equalsIgnoreCase(menuCategory.get().getCategory())).sorted().distinct().toList();
@@ -435,7 +438,7 @@ public class TelegramBotCommand extends TelegramLongPollingBot {
             } else if (callbackData.contains("#prodtitle")) {
                 String productTitle = callbackData.replace("#prodtitle", "");
                 List<Product> productList = productRepository.findByProductTitleIgnoreCase(productTitle);
-                executeEditMessageMedia(method.receiveProductSameTitle(chatId, messageId, productList.get(0).getProductPhotoLinc(), productList, DISCOUNT));
+                executeEditMessageMedia(method.receiveProductSameTitle(chatId, messageId, productList.get(0).getProductPhotoLinc(), productList)); // , DISCOUNT
 
             } else if (callbackData.contains("#userstatistic")) {
                 List<User> users = (ArrayList<User>) userRepository.findAll();
@@ -447,7 +450,7 @@ public class TelegramBotCommand extends TelegramLongPollingBot {
                 List<Optional<Product>> productStream = GROCERY_BASKET.get(chatId).stream().filter(prd -> !prd.get().getProductCategory().equalsIgnoreCase("добавка")).
                         filter(prd -> !prd.get().getProductCategory().equalsIgnoreCase("сироп")).toList();
 
-                // Ограничение позиций в заказе = 3 кофе  TODO сделать не хардкодом
+                // Ограничение позиций в заказе = 3 кофе
                 if (productStream.size() >= 3 && !product.get().getProductCategory().equalsIgnoreCase("добавка") &&
                         !product.get().getProductCategory().equalsIgnoreCase("сироп")) {
                     executeDeleteMessage(method.deleteMessage(chatId, messageId));
@@ -507,8 +510,11 @@ public class TelegramBotCommand extends TelegramLongPollingBot {
                 if (GROCERY_BASKET.get(chatId) == null) {
                     executeEditMessageText(method.receiveEditMessageText(chatId, messageId, "Ваша корзина пуста"));
                 } else {
+                    // time - каждая единица значения увеличивает время до того момента, когда заказ будет готов на 5 минут (time = 1 это +5 мин, time = 2 это +10 мин...)
                     int time = Integer.parseInt(callbackData.replace("#settime", ""));
-                    int changeTime = tempTime != null && tempTime.plus(5, MINUTES).isAfter(LocalTime.now()) ? time + 1 : time; // TODO сделать не хардкодом
+                    // changeTime - если значение tempTime не null и время tempTime не отстаёт от текущего более чем на 5 минут,
+                    // к значению time добавляется tmeUp, т.е. изначальное время до выдачи заказа увеличивается до (+tmeUp * 5) минут
+                    int changeTime = tempTime != null && tempTime.plus(5, MINUTES).isAfter(LocalTime.now()) ? time + config.tmeUp : time;
                     executeEditMessageText(method.setTime(chatId, messageId, ApplicationStrings.CHANGE_TIME_TEXT, changeTime));
                 }
 
@@ -524,8 +530,8 @@ public class TelegramBotCommand extends TelegramLongPollingBot {
                 String time = callbackData.replace("#makeorder", ""); // выбранное время в формате 00:00 - ч:м
                 List<LabeledPrice> labeledPriceList = new ArrayList<>();
                 GROCERY_BASKET.get(chatId).forEach(product -> labeledPriceList.add(new LabeledPrice(product.get().getProductTitle(),
-                        method.receiveDiscountPrice(DISCOUNT, product.get().getProductId(), Integer.parseInt(product.get().getProductPrice())) * 100)));
-                String payLinc = receiveExecutedInvoiceLinc(method.payOrder(chatId, messageId, "https://disk.yandex.ru/i/K331xGIlON2LxA", "381764678:TEST:62053", labeledPriceList));
+                        method.receiveFullPrice(Integer.parseInt(product.get().getProductPrice()), product.get().getProductDiscount()) * 100)));
+                String payLinc = receiveExecutedInvoiceLinc(method.payOrder(chatId, messageId, config.getPayProviderToken(), labeledPriceList, PHOTO_URL));
                 executeEditMessageText(method.approveOrder(chatId, messageId, "После оплаты, ваш заказ будет готов к " + time, payLinc));
 
             } else if (callbackData.contains("#payorder")) {
@@ -551,7 +557,7 @@ public class TelegramBotCommand extends TelegramLongPollingBot {
                 String firstName = user.get().getFirstname();
                 if (firstName.equals(DEFAULT_NAME)) {
                     TEMP_DATA.put(chatId, "#REGISTER");
-                    executeEditMessageText(method.receiveEditMessageText(chatId, messageId, "Введите, пожалуйста, ваше имя"));
+                    executeEditMessageText(method.receiveEditMessageText(chatId, messageId, "Введите, пожалуйста, ваше имя и отправьте сообщение"));
                 } else {
                     executeEditMessageText(method.receiveEditMessageText(chatId, messageId, firstName + ", вы являетесь зарегистрированным пользователем"));
                 }
@@ -576,25 +582,25 @@ public class TelegramBotCommand extends TelegramLongPollingBot {
 
             } else if (callbackData.contains("#allproducts")) {
                 List<Product> productList = (List<Product>) productRepository.findAll(); // список продуктов
-                executeEditMessageText(method.receiveAllProductMenu(chatId, messageId, "Выберите продукт для добавления или удаления скидки", productList, DISCOUNT));
+                executeEditMessageText(method.receiveAllProductMenu(chatId, messageId, "Выберите продукт для добавления или удаления скидки", productList));
 
             } else if (callbackData.contains("#observediscount")) {
                 StringBuilder messageText = new StringBuilder();
                 messageText.append("Список продуктов со скидкой:");
-                for (Map.Entry<Integer, Integer> discountMap : DISCOUNT.entrySet()) {
-                    Optional<Product> product = productRepository.findById(discountMap.getKey());
-                    messageText.append("\n").append(product.get().getProductTitle()).append(" ").append(product.get()
-                            .getProductSize()).append(" ml  -  скидка ").append(discountMap.getValue()).append("%");
-                }
+
+                ArrayList<Product> products = (ArrayList<Product>) productRepository.findAll();
+                products.stream().filter(product -> product.getProductDiscount() > 0).forEach(product -> messageText.append("\n").append(product.getProductTitle())
+                        .append(" ").append(product.getProductSize()).append(" ml  -  скидка ").append(product.getProductDiscount()).append("%"));
+
                 executeEditMessageText(method.receiveEditMessageText(chatId, messageId, messageText.toString()));
 
             } else if (callbackData.contains("#prodfordiscount")) {
                 int productId = Integer.parseInt(callbackData.replace("#prodfordiscount", ""));
                 Optional<Product> product = productRepository.findById(productId);
                 int price = Integer.parseInt(product.get().getProductPrice());
-                int discountPrice = method.receiveDiscountPrice(DISCOUNT, productId, price);
+                int discountPrice = method.receiveFullPrice(price, product.get().getProductDiscount());
                 String text = product.get().getProductTitle() + "\nОбъем " + product.get().getProductSize() + "\nЦена без скидки " +
-                        price + " ₽" + "\nЦена со скидкой " + discountPrice + " ₽" + "\nТекущая скидка " + DISCOUNT.get(productId) + "%";
+                        price + " ₽" + "\nЦена со скидкой " + discountPrice + " ₽" + "\nТекущая скидка " + product.get().getProductDiscount() + "%";
                 executeEditMessageText(method.receiveProductForDiscount(chatId, messageId, text, productId));
 
             } else if (callbackData.contains("#setdiscount")) {
@@ -607,7 +613,11 @@ public class TelegramBotCommand extends TelegramLongPollingBot {
 
             } else if (callbackData.contains("#deldiscount")) { // Удаление последнего сообщения чата
                 int productId = Integer.parseInt(callbackData.replace("#deldiscount", ""));
-                DISCOUNT.remove(productId);
+                Optional<Product> product = productRepository.findById(productId);
+                Product editedProduct = (Product) product.get().clone();
+                editedProduct.setProductDiscount(0);
+                productRepository.save(editedProduct);
+                //DISCOUNT.remove(productId);
                 executeEditMessageText(method.receiveEditMessageText(chatId, messageId, "Скидка отменена"));
 
             } else if (callbackData.contains("#cancelmessage")) { // Удаление последнего сообщения чата
@@ -634,24 +644,29 @@ public class TelegramBotCommand extends TelegramLongPollingBot {
             long chatId = Long.parseLong(chatIdAndMessageId[0]);
             int messageId = Integer.parseInt(chatIdAndMessageId[1]);
 
-            // Создаются 2 строки: строка для кассового чека в формате: продукт-450-300#  и  строка покупок в формате: продукт-450ml-300 для записи в б.д.
-            StringBuilder cashReceiptBuilder = new StringBuilder();
+            // Создаются 2 строки: строка для кассового чека в формате: продукт-450-300# и строка покупок в формате: продукт-450ml-300 для записи в б.д.
+            StringBuilder cashReceiptString = new StringBuilder();
             StringBuilder purchaseBuilder = new StringBuilder();
             StringBuilder orderBuilder = new StringBuilder();
             int fullPrice = 0;
             for (Optional<Product> product : GROCERY_BASKET.get(chatId)) {
-                int discountPrice = method.receiveDiscountPrice(DISCOUNT, product.get().getProductId(), Integer.parseInt(product.get().getProductPrice()));
+                // int discountPrice = method.receiveDiscountPrice(DISCOUNT, product.get().getProductId(), Integer.parseInt(product.get().getProductPrice()));
+                int discountPrice = method.receiveFullPrice(Integer.parseInt(product.get().getProductPrice()), product.get().getProductDiscount());
                 purchaseBuilder.append(product.get().getProductTitle()).append("-").append(product.get().getProductSize()).append("ml-").append(discountPrice).append("-"); // для бд, формат: продукт-450ml-300
                 orderBuilder.append(product.get().getProductTitle()).append("  ").append(product.get().getProductSize()).append("ml").append("#");
-                cashReceiptBuilder.append(product.get().getProductTitle()).append("-").append(discountPrice).append("#"); // строка для кассового чека в формате: продукт-450-300#
+                cashReceiptString.append(product.get().getProductTitle()).append("-").append(discountPrice).append("#"); // строка для кассового чека в формате: продукт-450-300#
                 fullPrice += discountPrice;
             }
 
-            // Создание кассового чека
-            CashReceipt cashReceipt = new CashReceipt(cashReceiptBuilder.toString(), "00123", 6, 3, "приход", "www.pnh.ru", "Спасибо за покупку!");
+            //TODO////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+            cashReceiptNumber++;
+            CashReceiptBuilder cashReceiptBuilder = new CashReceiptBuilder();
+            // buildCashReceipt(String jsonDirectoryPath, String itemInfo, int workNumber, int cashReceiptNumber, String fn, String fd, String fp, String checkLink)
+            CashReceipt cashReceipt = cashReceiptBuilder.buildCashReceipt("C:\\cash_receipt_data.json",
+            cashReceiptString.toString(), cashReceiptNumber, "fn", "fd", "fp", "String checkLink");
             CashReceiptOutput cashReceiptOutput = new CashReceiptOutput();
-            cashReceiptOutput.createApachePDF(chatId, "C:\\", cashReceipt.getCashReceiptText());
-            String cashReceiptDirectory = cashReceiptOutput.getDirectoryPath();
+            cashReceiptOutput.createApachePDF(chatId, config.cashReceiptDirectoryPath, cashReceipt.getCashReceiptText()); // путь к директории хранения кассовых чеков // TODO "C:\\"
+            String cashReceiptDirectory = cashReceiptOutput.getCashReceiptSaveDirectory();
             executeSendDocument(method.sendDocument(chatId, cashReceiptDirectory));
 
             // Перезапись истории покупок пользователя в б.д.
@@ -675,7 +690,7 @@ public class TelegramBotCommand extends TelegramLongPollingBot {
             method.setCommonKeyBoard(sendMessage, GROCERY_BASKET.get(chatId));
             executeSendMessage(sendMessage);
 
-            Optional<User> barista = Optional.ofNullable(userRepository.findByFirstname(config.BARISTA));
+            Optional<User> barista = Optional.ofNullable(userRepository.findByFirstname(config.barista));
             barista.ifPresent(user1 -> ORDER_NUMBER.forEach((key, value) -> executeSendMessage(method.receiveOrderMessage(user1.getChatId(), key, value))));
         }
     }
@@ -735,7 +750,7 @@ public class TelegramBotCommand extends TelegramLongPollingBot {
         try {
             execute(answerCallbackQuery);
         } catch (TelegramApiException e) {
-            log.error("AnswerCallbackQuery execute exc: " + e.getMessage());
+           log.error("AnswerCallbackQuery execute exc: " + e.getMessage());
         }
     }
 
@@ -763,15 +778,15 @@ public class TelegramBotCommand extends TelegramLongPollingBot {
         product.setProductPhotoLinc(productData[4]);
         product.setProductSize(productData[5]);
         product.setProductPrice(productData[6]);
+        product.setProductDiscount(0);
         productRepository.save(product);
     }
 
 
-    private void setCategoryInDB(String pictureData) {
-        String[] splitData = pictureData.split("_");
+    private void setCategoryInDB(String[] categoryData) {
         MenuCategory categoryMenu = new MenuCategory();
-        categoryMenu.setCategory(splitData[0]);
-        categoryMenu.setPictureLinc(splitData[1]);
+        categoryMenu.setCategory(categoryData[0]);
+        categoryMenu.setPictureLinc(categoryData[1]);
         menuCategoryRepository.save(categoryMenu);
     }
 
@@ -790,6 +805,7 @@ public class TelegramBotCommand extends TelegramLongPollingBot {
     // Удаление данных из Map по расписанию
     @Scheduled(cron = "0 0 0 * * *")
     private void removeDataFromCollections() {
+        cashReceiptNumber = 0;
         GROCERY_BASKET.clear();
         ORDER_NUMBER.clear();
         TEMP_DATA.clear();

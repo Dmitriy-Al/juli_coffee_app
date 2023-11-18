@@ -2,7 +2,6 @@ package julia.cafe.service;
 
 import julia.cafe.model.MenuCategory;
 import julia.cafe.model.Product;
-import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
 import org.telegram.telegrambots.meta.api.methods.invoices.CreateInvoiceLink;
 import org.telegram.telegrambots.meta.api.methods.send.SendDocument;
@@ -31,7 +30,6 @@ import julia.cafe.model.User;
 import java.sql.Timestamp;
 import java.util.*;
 
-@Slf4j
 @Component
 public class TelegramBotMethods {
 
@@ -108,35 +106,35 @@ public class TelegramBotMethods {
     }
 
 
-    protected CreateInvoiceLink payOrder(long chatId, int messageId, String photoUrl, String providerToken, List<LabeledPrice> labeledPriceList) {
-        String jsonText = "{\"Текст\": \"текст\",\"Число\": 12345}";
-        String invoiceText = chatId + "-" + messageId;
-        List<Integer> suggestedTipAmounts = new ArrayList<>(); //  - размер чаевых
+    protected CreateInvoiceLink payOrder(long chatId, int messageId, String providerToken, List<LabeledPrice> labeledPriceList, String photoUrl) {
+/*      List<Integer> suggestedTipAmounts = new ArrayList<>(); //  - размер чаевых, опционально
         suggestedTipAmounts.add(1000);
         suggestedTipAmounts.add(3000);
-        suggestedTipAmounts.add(5000);
+        suggestedTipAmounts.add(5000);         */
+        String jsonText = "{\"Текст\": \"Текст\",\"Число\": 12345}"; //TODO {\"Текст\": \"текст\",\"Число\": 12345}
+        String invoiceText = chatId + "-" + messageId; // chatId и messageId будут получены в preCheckoutQuery.getInvoicePayload()
+
         return new CreateInvoiceLink("Juli coffee", // @NonNull String title
                 "Ваша корзина", // @NonNull String description
-                invoiceText, // @NonNull String payload - определенная полезная нагрузка счета-фактуры, 1-128 байт. Это не будет отображаться пользователю, используйте для своих внутренних процессов
-                providerToken, // @NonNull String providerToken - Сбер токен
-                // "381764678:TEST:62053", // @NonNull String providerToken - Юкасса токен (Юкасса подключает физлиц)
-                "RUB", // @NonNull String currency
+                invoiceText, // @NonNull String payload - определенная полезная нагрузка счета-фактуры, 1-128 байт. Информация не видна пользователю, используйте для своих внутренних процессов
+                providerToken, // @NonNull String providerToken - токен банка/провайдера платежей - "381764678:TEST:62053", // @NonNull String providerToken - Юкасса токен (Юкасса подключает физлиц)
+                "RUB", // @NonNull String currency (валюта)
                 labeledPriceList, // @NonNull List<LabeledPrice> prices
-                "https://lookaside.fbsbx.com/lookaside/crawler/media/?media_id=101383654886643", // String photoUrl фотография в меню покупки
+                photoUrl, // String photoUrl - фотография в меню покупки
                 null, null, null, //  Integer photoSize, Integer photoWidth, Integer photoHeight
 
                 // Boolean needName, Boolean needPhoneNumber, Boolean needEmail, Boolean needShippingAddress, Boolean isFlexible, Boolean sendPhoneNumberToProvider, Boolean sendEmailToProvider
-                true, true, false, true /* needShippingAddress */, false /* isFlexible - цена зависит от доставки */, true/* sendPhoneNumberToProvider */, false,
-                jsonText, // String providerData - JSON-сериализованные данные о счете-фактуре, которые будут переданы поставщику платежей. Подробное описание обязательных полей должно быть предоставлено поставщиком платежных услуг
-                50000, // Integer maxTipAmount - максимальный размер чаевых
+                false, false, false, false /* needShippingAddress */, false /* isFlexible - цена зависит от доставки */, false/* sendPhoneNumberToProvider */, false,
+                jsonText, // String providerData - JSON-сериализованные данные о счете-фактуре, которые будут переданы поставщику платежей. Подробное описание обязательных полей должно быть предоставлено поставщиком платежных услуг //TODO
+                0, // Integer maxTipAmount - максимальный размер чаевых
                 null); // List<Integer> suggestedTipAmounts) - размер чаевых
     }
 
 
     protected EditMessageText setTime(long chatId, int messageId, String messageText, int changeTime) {
         DateTimeFormatter dateTimeFormatter = DateTimeFormatter.ofPattern("HH:mm");
-        LocalTime time = LocalTime.now();
-        //LocalTime time = LocalTime.parse("21:28:00");
+        //LocalTime time = LocalTime.now();
+        LocalTime time = LocalTime.parse("21:28:00");
         int setTime = 5 * changeTime;
         LocalTime updateTime = time.plusMinutes(setTime);
         String timeString = dateTimeFormatter.format(updateTime);
@@ -382,12 +380,12 @@ public class TelegramBotMethods {
         long amountPurchase = 0;
         long maxPurchase = 0;
 
-        for (int i = 0; i < users.size(); i++) {
-            if (!users.get(i).getPurchase().equals("no purchase")) {
-                String[] data = users.get(i).getPurchase().split("purchase");
+        for (User user : users) {
+            if (!user.getPurchase().equals("no purchase")) {
+                String[] data = user.getPurchase().split("purchase");
                 cashReceiptCount += data.length;
-                for (int y = 0; y < data.length; y++) {
-                    String[] purchase = data[y].split("-");
+                for (String datum : data) {
+                    String[] purchase = datum.split("-");
                     long purchasePrice = Long.parseLong(purchase[purchase.length - 1]);
                     amountPurchase += purchasePrice;
                     if (maxPurchase < purchasePrice) {
@@ -470,7 +468,7 @@ public class TelegramBotMethods {
     }
 
 
-    protected SendMessage receiveGroceryBasket(String chatId, String messageText, List<Optional<Product>> productList, Map<Integer, Integer> discount) {
+    protected SendMessage receiveGroceryBasket(String chatId, String messageText, List<Optional<Product>> productList) {
         StringBuilder stringBuilder = new StringBuilder();
         stringBuilder.append(messageText);
 
@@ -480,8 +478,8 @@ public class TelegramBotMethods {
         List<InlineKeyboardButton> secondRowInlineButton = new ArrayList<>();
 
         for (Optional<Product> product : productList) {
-            String price = discount.get(product.get().getProductId()) == null ? product.get().getProductPrice() + " ₽" :
-                    receiveDiscountPrice(discount, product.get().getProductId(), Integer.parseInt(product.get().getProductPrice())) + " ₽ \uD83D\uDD25%";
+            String price = product.get().getProductDiscount() == 0 ? product.get().getProductPrice() + " ₽" :
+                    receiveFullPrice(Integer.parseInt(product.get().getProductPrice()), product.get().getProductDiscount()) + " ₽ \uD83D\uDD25%";
             String productSize = product.get().getProductSize().equals("*") ? " " : product.get().getProductSize() + " ml  ";
             stringBuilder.append("\n\n✔️  ").append(product.get().getProductTitle()).append("  ").append(productSize).append(price);
         }
@@ -536,7 +534,7 @@ public class TelegramBotMethods {
     }
 
 
-    protected EditMessageMedia receiveProductSameTitle(long chatId, int messageId, String picturesLink, List<Product> productList, Map<Integer, Integer> discount) {
+    protected EditMessageMedia receiveProductSameTitle(long chatId, int messageId, String picturesLink, List<Product> productList) { //, Map<Integer, Integer> discount
         EditMessageMedia editMessageMedia = new EditMessageMedia();
         editMessageMedia.setMessageId(messageId);
         editMessageMedia.setChatId(chatId);
@@ -548,8 +546,11 @@ public class TelegramBotMethods {
         for (Product product : productList) {
             List<InlineKeyboardButton> rowInlineButton = new ArrayList<>();
             InlineKeyboardButton button = new InlineKeyboardButton();
+            /*
             String buttonText = discount.get(product.getProductId()) == null ? product.getProductTitle() + "   " + product.getProductSize() + "ml  " + product.getProductPrice() + " ₽" :
-                    product.getProductTitle() + "   " + product.getProductSize() + "ml  " + product.getProductPrice() + " ₽" + "  \uD83D\uDD25 -" + discount.get(product.getProductId()) + "%";
+                    product.getProductTitle() + "   " + product.getProductSize() + "ml  " + product.getProductPrice() + " ₽" + "  \uD83D\uDD25 -" + discount.get(product.getProductId()) + "%";*/
+            String buttonText = product.getProductDiscount() == 0 ? product.getProductTitle() + "   " + product.getProductSize() + "ml  " + product.getProductPrice() + " ₽" :
+                    product.getProductTitle() + "   " + product.getProductSize() + "ml  " + product.getProductPrice() + " ₽" + "  \uD83D\uDD25 -" + product.getProductDiscount() + "%";
             button.setText(buttonText);
             button.setCallbackData("#product" + product.getProductId());
             rowInlineButton.add(button);
@@ -660,7 +661,7 @@ public class TelegramBotMethods {
 
 
     // Метод создаёт меню с полным ассортиментом продуктов
-    protected EditMessageText receiveAllProductMenu(long chatId, int messageId, String messageText, List<Product> products, Map<Integer, Integer> discount) {
+    protected EditMessageText receiveAllProductMenu(long chatId, int messageId, String messageText, List<Product> products) {
         EditMessageText editMessageText = receiveEditMessageText(chatId, messageId, messageText);
 
         InlineKeyboardMarkup inlineKeyboardMarkup = new InlineKeyboardMarkup();
@@ -669,8 +670,8 @@ public class TelegramBotMethods {
         for (Product product : products) {
             List<InlineKeyboardButton> rowInlineButton = new ArrayList<>();
             InlineKeyboardButton productButton = new InlineKeyboardButton();
-            String buttonText = discount.get(product.getProductId()) == null ? product.getProductTitle() + " " + product.getProductSize() +
-                    " ml" : product.getProductTitle() + " " + product.getProductSize() + " ml  \uD83D\uDD25 -" + discount.get(product.getProductId()) + "%";
+            String buttonText = product.getProductDiscount() == 0 ? product.getProductTitle() + " " + product.getProductSize() +
+                    " ml" : product.getProductTitle() + " " + product.getProductSize() + " ml  \uD83D\uDD25 -" + product.getProductDiscount() + "%";
             productButton.setText(buttonText);
             productButton.setCallbackData("#prodfordiscount" + product.getProductId());
             rowInlineButton.add(productButton);
@@ -793,7 +794,15 @@ public class TelegramBotMethods {
         return (upPrice - upDiscount) / 100;
     }
 
+    public int receiveFullPrice(int price, int discount) {
+        int upPrice = price * 100;
+        int upDiscount =  discount * price;
+        return (upPrice - upDiscount) / 100;
+    }
+
+
 ////////////////////////////////////////////////// TEST ///////////////////////////////////////////////////////////////
+
 
 
 }

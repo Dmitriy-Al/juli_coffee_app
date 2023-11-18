@@ -1,7 +1,7 @@
 package julia.cafe.cashreceipt;
-import java.time.LocalDateTime;
-import java.time.format.DateTimeFormatter;
 
+@lombok.Setter
+@lombok.Getter
 public class CashReceipt {
 
     private String companyTitle; // "ИП Джулия кофе" - наименование фирмы "ИП Джулия кофе"
@@ -17,46 +17,23 @@ public class CashReceipt {
     private String rnkkt; // регистрационный номер ккт - "рн ккт   000"
     private String znkkt; // заводской номер ккт - "зн ккт   000"
     private String sno; // система налогообложения - "усн доход"
+    private String anyText; // любой сопроводительный текст - "Спасибо за покупку!"
+
     private String fn; // заводской номер фискального документа - "фн   000"
     private String fd; //  // порядковый номер фискального документа - "фд   000"
     private String fp; // фискальный признак документа - "фп   000"
-    private int workNumber; //  порядковый номер чека за смену - "чек №  000"
+    private String checkLink; // ссылка для проверки чека
+
+    private int workNumber; // номер смены
     private int cashReceiptNumber; //  порядковый номер чека за смену - "чек №  000"
     private String dateTime;//  дата и время - "11.09.2002   14:00"
-    private String checkLink; // ссылка для проверки чека
-    private String anyText; // любой сопроводительный текст - "Спасибо за покупку!"
-
-    private DateTimeFormatter dateTimeFormatter = DateTimeFormatter.ofPattern("dd.MM.yyyy   HH:mm");
-    private LocalDateTime localDateTime = LocalDateTime.now();
 
 
-    public CashReceipt(String itemInfo, String fd, int workNumber, int cashReceiptNumber, String invoiceSort, String checkLink, String anyText) {
-        this.itemInfo = itemInfo;
-        this.workNumber = workNumber;
-        this.fd = "фд   " + fd;
-        this.invoiceSort = invoiceSort;
-        this.checkLink = checkLink;
-        this.cashReceiptNumber = cashReceiptNumber;
-        this.anyText = anyText;
-
-        companyTitle = "ИП Джулия кофе";
-        companyAttribute = "Спб, м. Новочеркасская д 54";
-        documentTitle = "Кассовый чек";
-        nds = 20;
-        payment = "электронными";
-        seller = "Сбер касса";
-        fnsSite = "сайт ФНС www.nalog.ru";
-        ofd = "офд   CDZP";
-        rnkkt = "рн ккт   000";
-        znkkt = "зн ккт   000";
-        sno = "усн доход";
-        fn = "фн   " + "000";
-        fp = "фп   000";
-        dateTime = dateTimeFormatter.format(localDateTime);
-    }
+    public CashReceipt(){}
 
 
-    public CashReceipt(String itemInfo, String companyTitle, String companyAttribute, String invoiceSort, double nds, String payment, String seller, String fnsSite, String ofd, String rnkkt, String znkkt, String sno, String fn, String fd, String fp, int workNumber, int cashReceiptNumber, String checkLink, String anyText) {
+    public CashReceipt(String itemInfo, String companyTitle, String companyAttribute, String invoiceSort, double nds, String payment, String seller, String fnsSite, String ofd,
+                       String rnkkt, String znkkt, String sno, String fn, String fd, String fp, int workNumber, int cashReceiptNumber, String checkLink, String anyText) {
         this.companyTitle = companyTitle;
         this.companyAttribute = companyAttribute;
         this.invoiceSort = invoiceSort;
@@ -77,6 +54,7 @@ public class CashReceipt {
         this.checkLink = checkLink;
         this.anyText = anyText;
     }
+
 
     public String getCashReceipt() {
         int summa = 0;
@@ -110,6 +88,7 @@ public class CashReceipt {
                 "\n" + anyText;
     }
 
+
     public String getCashReceiptText() {
         int summa = 0;
         String[] itemData = itemInfo.split("#");
@@ -123,9 +102,9 @@ public class CashReceipt {
                 "#" + companyAttribute +
                 "#" + documentTitle +
                 "#" + invoiceSort +
-                "#" + stringBuilder +
-                "#" + "итого   " + summa +
-                "#" + nds + "%  =  " + (summa * (nds * 0.01)) +
+                stringBuilder +
+                "#" + "итого  = " + summa +
+                "#" + nds + "%  = " + (summa * (nds * 0.01)) +
                 "#" + payment +
                 "#" + seller +
                 "#" + fnsSite +
@@ -136,7 +115,6 @@ public class CashReceipt {
                 "#" + fn +
                 "#" + fd +
                 "#" + fp +
-                "#" + "смена N " + workNumber +
                 "#" + "чек N " + cashReceiptNumber +
                 "#" + dateTime +
                 "#" + checkLink +

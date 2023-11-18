@@ -6,11 +6,13 @@ import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import lombok.extern.slf4j.Slf4j;
 
-@Slf4j
+//@Slf4j
 @lombok.Setter
 @lombok.Getter
-@Entity(name = "categoryTable")
+@Entity(name = "category_table")
 public class MenuCategory implements Comparable<MenuCategory>{
+
+    public MenuCategory(){}
 
     @Id
     @GeneratedValue(strategy = GenerationType.AUTO)
